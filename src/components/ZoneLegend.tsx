@@ -73,7 +73,8 @@ export function ZoneLegend({
         })}
       </div>
 
-      <div className="grid min-h-0 flex-1 grid-cols-2 content-start gap-2 overflow-y-auto pr-1">
+      {/* 스크롤 영역이 자식의 바깥 그림자·선을 잘라내므로, 안쪽 여백을 주고 바깥 여백은 음수 마진으로 상쇄한다. */}
+      <div className="-m-1 grid min-h-0 flex-1 grid-cols-2 content-start gap-2 overflow-y-auto p-1">
         {list.map(({ zone }) => {
           const active = zone.sectionId === activeSectionId
           const ratio = zone.totalSeats === 0 ? 0 : zone.availableSeats / zone.totalSeats
@@ -84,13 +85,21 @@ export function ZoneLegend({
               type="button"
               onClick={() => onSelect(zone.sectionId)}
               className={[
-                'press group flex flex-col gap-2 rounded-2xl border p-3 text-left transition-all',
+                'press group relative flex flex-col gap-2 overflow-hidden rounded-2xl border p-3 pl-4 text-left transition-all',
                 active
-                  ? 'border-transparent bg-white shadow-md ring-2 dark:bg-slate-900'
+                  ? 'bg-white shadow-md dark:bg-slate-900'
                   : 'border-slate-200 bg-white hover:-translate-y-0.5 hover:shadow-sm dark:border-slate-800 dark:bg-slate-900',
               ].join(' ')}
-              style={active ? { boxShadow: `0 0 0 2px ${FAMILY_COLOR[family]}` } : undefined}
+              style={active ? { borderColor: FAMILY_COLOR[family] } : undefined}
             >
+              {/* 선택 표시는 카드 안쪽에 그린다. 바깥에 그리면 스크롤 영역에 잘린다. */}
+              {active && (
+                <span
+                  aria-hidden
+                  className="absolute inset-y-0 left-0 w-1"
+                  style={{ backgroundColor: FAMILY_COLOR[family] }}
+                />
+              )}
               <div className="flex items-center justify-between">
                 <span className="text-sm font-bold">{zoneLabel(zone.name)}</span>
                 <span className="tabular text-[11px] font-semibold text-slate-500">
