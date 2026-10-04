@@ -212,8 +212,8 @@ export function BookingSeatMapPage() {
       )}
 
       {zoneInfos.length > 0 && (
-        <section className="rounded-3xl border border-slate-200 p-5 lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto dark:border-slate-800">
-          <div className="mb-4 flex items-baseline justify-between">
+        <section className="flex flex-col rounded-3xl border border-slate-200 p-5 lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] dark:border-slate-800">
+          <div className="mb-3 flex items-baseline justify-between">
             <h2 className="font-bold">구역 둘러보기</h2>
             <p className="text-xs text-slate-500">구역을 누르면 지도에서 그 자리로 줌인돼요</p>
           </div>

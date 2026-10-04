@@ -490,13 +490,19 @@ export function StadiumMap({
     if (!el) return
     const update = () => {
       const w = el.clientWidth
+      // 세로는 화면 높이에 맞춘다. 가로만 보고 키우면 큰 화면에서 지도가 목록보다 너무 커진다.
+      const h = Math.min(760, Math.max(460, Math.round(Math.min(w * 1.05, window.innerHeight * 0.8))))
+      setSize({ w, h })
       // 돔 비율(가로:세로 약 0.77)에 맞춰 세로를 잡고, 너무 커지지 않게만 제한한다.
-      setSize({ w, h: Math.min(760, Math.max(460, Math.round(w * 1.05))) })
     }
     update()
     const observer = new ResizeObserver(update)
     observer.observe(el)
-    return () => observer.disconnect()
+    window.addEventListener('resize', update)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', update)
+    }
   }, [])
 
   useEffect(() => {
