@@ -4,12 +4,8 @@ import type { ApiError } from '../api/client'
 export function ErrorBanner({ error }: { error: ApiError }) {
   const { problem } = error
   return (
-    <div className="rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
-      <p className="font-semibold">
-        {problem.code ? `${problem.code} · ` : ''}
-        {problem.title ?? '요청 실패'}
-      </p>
-      {problem.detail && <p className="mt-1">{problem.detail}</p>}
+    <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
+      <p className="font-semibold">{problem.detail ?? '요청을 처리하지 못했어요. 다시 시도해 주세요.'}</p>
       {problem.errors && problem.errors.length > 0 && (
         <ul className="mt-2 list-disc pl-5">
           {problem.errors.map((fieldError) => (
@@ -25,7 +21,7 @@ export function ErrorBanner({ error }: { error: ApiError }) {
 
 export function SuccessBanner({ children }: { children: ReactNode }) {
   return (
-    <div className="rounded-lg border border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
+    <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300">
       {children}
     </div>
   )

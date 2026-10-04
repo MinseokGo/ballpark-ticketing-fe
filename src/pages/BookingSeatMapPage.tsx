@@ -15,8 +15,11 @@ import { SeatMapGrid } from '../components/SeatMapGrid'
 import { StadiumMap } from '../components/StadiumMap'
 import { useBookingHistory } from '../hooks/useBookingHistory'
 import { useUserId } from '../hooks/useUserId'
+import { groupIntoBlocks } from '../lib/seatBlocks'
+import { STADIUM_PALETTE } from '../lib/stadiumPalette'
 import { teamColor } from '../lib/teamColors'
 import type { ReservationResponse, SeatMapItemResponse } from '../api/types'
+import type { StadiumSectionData } from '../components/StadiumMap'
 
 const MAX_SEATS = 4
 
@@ -31,6 +34,7 @@ export function BookingSeatMapPage() {
   const gameId = Number(gameIdParam)
   const queryClient = useQueryClient()
   const [userId, setUserId] = useUserId()
+  const [showUserSwitch, setShowUserSwitch] = useState(false)
   const { upsert: upsertHistory } = useBookingHistory()
   const [selectedSeatIds, setSelectedSeatIds] = useState<Set<number>>(new Set())
   const [reservation, setReservation] = useState<ReservationResponse | null>(null)
@@ -73,11 +77,11 @@ export function BookingSeatMapPage() {
   })
 
   const payMutation = useMutation({
-    mutationFn: (success: boolean) => pay(reservation!.id, { success }).then(() => success),
-    onSuccess: (success) => {
+    mutationFn: () => pay(reservation!.id, { success: true }),
+    onSuccess: () => {
       setReservation((prev) => {
         if (!prev) return prev
-        const next: ReservationResponse = { ...prev, status: success ? 'CONFIRMED' : prev.status }
+        const next: ReservationResponse = { ...prev, status: 'CONFIRMED' }
         recordHistory(next)
         return next
       })
@@ -118,7 +122,17 @@ export function BookingSeatMapPage() {
     group.items.push(item)
   }
 
-  const effectiveSectionId = selectedSectionId ?? availabilityQuery.data?.[0]?.sectionId ?? null
+  const stadiumSections: StadiumSectionData[] = sections.map((section) => ({
+    sectionId: section.sectionId,
+    name: section.sectionName,
+    blocks: groupIntoBlocks(section.items).map((blockItems, index) => ({
+      label: `${index + 1}블록`,
+      available: blockItems.filter((item) => item.status === 'AVAILABLE').length,
+      total: blockItems.length,
+    })),
+  }))
+
+  const effectiveSectionId = selectedSectionId ?? sections[0]?.sectionId ?? null
   const selectedSection = sections.find((section) => section.sectionId === effectiveSectionId) ?? null
   const selectedAvailability =
     availabilityQuery.data?.find((section) => section.sectionId === effectiveSectionId) ?? null
@@ -130,9 +144,31 @@ export function BookingSeatMapPage() {
 
   return (
     <div className="space-y-6 pb-32">
-      <Link to="/booking" className="text-sm text-slate-500 hover:underline">
-        ← 경기 목록
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link to="/booking" className="text-sm text-slate-500 hover:underline">
+          ← 경기 목록
+        </Link>
+        <button
+          type="button"
+          onClick={() => setShowUserSwitch((prev) => !prev)}
+          className="flex size-8 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white"
+        >
+          {userId}
+        </button>
+      </div>
+
+      {showUserSwitch && (
+        <label className="block w-44 text-sm">
+          사용자 전환
+          <input
+            type="number"
+            min={1}
+            value={userId}
+            onChange={(event) => setUserId(Number(event.target.value) || 1)}
+            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700 dark:bg-slate-900"
+          />
+        </label>
+      )}
 
       <div
         className="rounded-3xl p-6 text-white"
@@ -158,25 +194,35 @@ export function BookingSeatMapPage() {
         )}
       </div>
 
-      <label className="block w-44 text-sm">
-        사용자 ID (X-User-Id)
-        <input
-          type="number"
-          min={1}
-          value={userId}
-          onChange={(event) => setUserId(Number(event.target.value) || 1)}
-          className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700 dark:bg-slate-900"
-        />
-      </label>
-
-      {availabilityQuery.data && (
+      {stadiumSections.length > 0 && (
         <div className="rounded-3xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
           <p className="mb-3 text-center text-sm text-slate-500">구역을 탭해서 좌석을 골라보세요</p>
           <StadiumMap
-            sections={availabilityQuery.data}
+            sections={stadiumSections}
             selectedSectionId={effectiveSectionId}
             onSelect={setSelectedSectionId}
           />
+          <div className="mt-4 flex flex-wrap justify-center gap-2">
+            {availabilityQuery.data?.map((section, index) => (
+              <button
+                key={section.sectionId}
+                type="button"
+                onClick={() => setSelectedSectionId(section.sectionId)}
+                className={[
+                  'flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
+                  section.sectionId === effectiveSectionId
+                    ? 'border-blue-300 bg-blue-50 dark:border-blue-700 dark:bg-blue-950'
+                    : 'border-slate-200 dark:border-slate-700',
+                ].join(' ')}
+              >
+                <span
+                  className="size-2 rounded-full"
+                  style={{ backgroundColor: STADIUM_PALETTE[index % STADIUM_PALETTE.length] }}
+                />
+                {section.name} · {section.price.toLocaleString()}원
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
@@ -188,8 +234,7 @@ export function BookingSeatMapPage() {
             <h2 className="font-semibold">{selectedSection.sectionName}</h2>
             {selectedAvailability && (
               <p className="tabular text-sm text-slate-500">
-                {selectedAvailability.price.toLocaleString()}원 · {selectedAvailability.availableSeats} /{' '}
-                {selectedAvailability.totalSeats}석 남음
+                {selectedAvailability.availableSeats} / {selectedAvailability.totalSeats}석 남음
               </p>
             )}
           </div>
@@ -252,18 +297,10 @@ export function BookingSeatMapPage() {
                 <button
                   type="button"
                   disabled={payMutation.isPending}
-                  onClick={() => payMutation.mutate(true)}
+                  onClick={() => payMutation.mutate()}
                   className="flex-1 rounded-full bg-emerald-600 px-4 py-3 text-sm font-bold text-white disabled:opacity-40"
                 >
-                  결제 성공으로 처리
-                </button>
-                <button
-                  type="button"
-                  disabled={payMutation.isPending}
-                  onClick={() => payMutation.mutate(false)}
-                  className="rounded-full border border-red-200 px-4 py-3 text-sm font-semibold text-red-600 disabled:opacity-40 dark:border-red-900"
-                >
-                  결제 실패
+                  {payMutation.isPending ? '결제하는 중...' : '결제하기'}
                 </button>
                 <button
                   type="button"
@@ -278,21 +315,21 @@ export function BookingSeatMapPage() {
 
             {reservation.status === 'CONFIRMED' && (
               <div className="space-y-2">
-                <SuccessBanner>결제 완료! 좌석이 판매 완료(SOLD) 상태로 바뀌었다.</SuccessBanner>
+                <SuccessBanner>결제 완료! 예매가 확정됐어요.</SuccessBanner>
                 <button
                   type="button"
                   disabled={cancelMutation.isPending}
                   onClick={() => cancelMutation.mutate()}
                   className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold disabled:opacity-40 dark:border-slate-700"
                 >
-                  예약 취소 (환불은 v1 범위 밖)
+                  예약 취소하기
                 </button>
               </div>
             )}
 
             {reservation.status === 'CANCELLED' && (
               <div className="flex items-center justify-between">
-                <p className="text-sm text-slate-500">취소됐다. 좌석을 다시 선택할 수 있다.</p>
+                <p className="text-sm text-slate-500">취소됐어요. 좌석을 다시 선택할 수 있어요.</p>
                 <button
                   type="button"
                   onClick={() => setReservation(null)}

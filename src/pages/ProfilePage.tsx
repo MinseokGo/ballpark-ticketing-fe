@@ -30,12 +30,9 @@ export function ProfilePage() {
         </div>
         <div className="flex-1">
           <p className="font-semibold">사용자 #{userId}</p>
-          <p className="text-sm text-slate-500">
-            v1은 로그인이 없어 요청마다 X-User-Id 헤더로만 사용자를 밝힌다. 여기서 바꾸면 예매할 때도 이
-            ID로 보낸다.
-          </p>
+          <p className="text-sm text-slate-500">야구장 멤버십 회원</p>
           <label className="mt-2 block w-32 text-xs text-slate-500">
-            사용자 ID
+            계정 전환
             <input
               type="number"
               min={1}
@@ -48,15 +45,11 @@ export function ProfilePage() {
       </div>
 
       <div>
-        <h2 className="mb-1 text-lg font-bold">내 예약</h2>
-        <p className="mb-3 text-sm text-slate-500">
-          서버에 "내 예약 목록" 조회 API가 아직 없어서, 이 브라우저에서 만든 예약만 기록해 둔 것이다. 다른
-          기기나 브라우저의 예약은 보이지 않는다.
-        </p>
+        <h2 className="mb-3 text-lg font-bold">내 예약</h2>
 
         {entries.length === 0 ? (
           <p className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500 dark:border-slate-700">
-            아직 예약한 경기가 없다.{' '}
+            아직 예약한 경기가 없어요.{' '}
             <Link to="/booking" className="text-blue-600 hover:underline">
               예매하러 가기
             </Link>
