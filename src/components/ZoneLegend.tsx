@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { FAMILY_COLOR, parseSectionName, type Family } from '../lib/stadiumLayout'
 
 export type ZoneInfo = {
@@ -20,8 +19,8 @@ function zoneLabel(name: string) {
 }
 
 /**
- * 계열 탭 + 구역 카드 목록. 탭으로 계열을 고르고, 카드를 누르면 지도에서 그 구역으로 줌인된다.
- * 카드마다 남은 좌석 비율을 막대로 보여준다.
+ * 계열별로 묶은 구역 카드 목록. 탭으로 가리지 않고 모든 계열을 펼쳐서 보여준다.
+ * 카드를 누르면 지도에서 그 구역으로 줌인된다. 카드마다 남은 좌석 비율을 막대로 보여준다.
  */
 export function ZoneLegend({
   zones,
@@ -42,81 +41,70 @@ export function ZoneLegend({
   }
   const families = FAMILY_ORDER.filter((family) => groups.has(family))
 
-  const [picked, setPicked] = useState<Family | null>(null)
-  const family = picked && groups.has(picked) ? picked : (families[0] ?? null)
-  const list = family
-    ? [...groups.get(family)!].sort((a, b) => a.tier.localeCompare(b.tier) || a.half - b.half)
-    : []
-
-  if (!family) return null
+  if (families.length === 0) return null
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <div className="scrollbar-none -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-3">
-        {families.map((item) => {
-          const active = item === family
-          return (
-            <button
-              key={item}
-              type="button"
-              onClick={() => setPicked(item)}
-              className="press shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors"
-              style={
-                active
-                  ? { backgroundColor: FAMILY_COLOR[item], color: '#fff' }
-                  : undefined
-              }
-            >
-              <span className={active ? '' : 'text-slate-500 dark:text-slate-400'}>{item}</span>
-            </button>
-          )
-        })}
-      </div>
-
-      {/* 스크롤 영역이 자식의 바깥 그림자·선을 잘라내므로, 안쪽 여백을 주고 바깥 여백은 음수 마진으로 상쇄한다. */}
-      <div className="-m-1 grid min-h-0 flex-1 grid-cols-2 content-start gap-2 overflow-y-auto p-1">
-        {list.map(({ zone }) => {
-          const active = zone.sectionId === activeSectionId
-          const ratio = zone.totalSeats === 0 ? 0 : zone.availableSeats / zone.totalSeats
-          const soldOut = zone.availableSeats === 0
-          return (
-            <button
-              key={zone.sectionId}
-              type="button"
-              onClick={() => onSelect(zone.sectionId)}
-              className={[
-                'press group relative flex flex-col gap-2 overflow-hidden rounded-2xl border p-3 pl-4 text-left transition-all',
-                active
-                  ? 'bg-white shadow-md dark:bg-slate-900'
-                  : 'border-slate-200 bg-white hover:-translate-y-0.5 hover:shadow-sm dark:border-slate-800 dark:bg-slate-900',
-              ].join(' ')}
-              style={active ? { borderColor: FAMILY_COLOR[family] } : undefined}
-            >
-              {/* 선택 표시는 카드 안쪽에 그린다. 바깥에 그리면 스크롤 영역에 잘린다. */}
-              {active && (
-                <span
-                  aria-hidden
-                  className="absolute inset-y-0 left-0 w-1"
-                  style={{ backgroundColor: FAMILY_COLOR[family] }}
-                />
-              )}
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-bold">{zoneLabel(zone.name)}</span>
-                <span className="tabular text-[11px] font-semibold text-slate-500">
-                  {soldOut ? '매진' : `${zone.availableSeats}석`}
-                </span>
-              </div>
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                <div
-                  className="h-full rounded-full transition-[width] duration-500"
-                  style={{ width: `${ratio * 100}%`, backgroundColor: FAMILY_COLOR[family] }}
-                />
-              </div>
-              <span className="tabular text-xs text-slate-500">{zone.price.toLocaleString()}원</span>
-            </button>
-          )
-        })}
-      </div>
+    // 목록이 길어서 패널 안에서만 세로로 스크롤한다. 가로 스크롤은 쓰지 않는다.
+    <div className="min-h-0 flex-1 space-y-5 overflow-y-auto pr-1">
+      {families.map((family) => {
+        const list = [...groups.get(family)!].sort((a, b) => a.tier.localeCompare(b.tier) || a.half - b.half)
+        const available = list.reduce((sum, { zone }) => sum + zone.availableSeats, 0)
+        return (
+          <section key={family} aria-label={family}>
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="flex items-center gap-2 text-sm font-bold">
+                <span className="size-2.5 rounded-full" style={{ backgroundColor: FAMILY_COLOR[family] }} />
+                {family}
+              </h3>
+              <span className="tabular text-xs text-slate-500">잔여 {available.toLocaleString()}석</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {list.map(({ zone }) => {
+                const active = zone.sectionId === activeSectionId
+                const ratio = zone.totalSeats === 0 ? 0 : zone.availableSeats / zone.totalSeats
+                const soldOut = zone.availableSeats === 0
+                return (
+                  <button
+                    key={zone.sectionId}
+                    type="button"
+                    onClick={() => onSelect(zone.sectionId)}
+                    aria-pressed={active}
+                    className={[
+                      'press group relative flex flex-col gap-2 overflow-hidden rounded-2xl border p-3 pl-4 text-left transition-all',
+                      active
+                        ? 'bg-white shadow-md dark:bg-slate-900'
+                        : 'border-slate-200 bg-white hover:-translate-y-0.5 hover:shadow-sm dark:border-slate-800 dark:bg-slate-900',
+                    ].join(' ')}
+                    style={active ? { borderColor: FAMILY_COLOR[family] } : undefined}
+                  >
+                    {/* 선택 표시는 카드 안쪽에 그린다. 바깥에 그리면 스크롤 영역에 잘린다. */}
+                    {active && (
+                      <span
+                        aria-hidden
+                        className="absolute inset-y-0 left-0 w-1"
+                        style={{ backgroundColor: FAMILY_COLOR[family] }}
+                      />
+                    )}
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-bold">{zoneLabel(zone.name)}</span>
+                      <span className="tabular text-[11px] font-semibold text-slate-500">
+                        {soldOut ? '매진' : `${zone.availableSeats}석`}
+                      </span>
+                    </div>
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                      <div
+                        className="h-full rounded-full transition-[width] duration-500"
+                        style={{ width: `${ratio * 100}%`, backgroundColor: FAMILY_COLOR[family] }}
+                      />
+                    </div>
+                    <span className="tabular text-xs text-slate-500">{zone.price.toLocaleString()}원</span>
+                  </button>
+                )
+              })}
+            </div>
+          </section>
+        )
+      })}
     </div>
   )
 }
