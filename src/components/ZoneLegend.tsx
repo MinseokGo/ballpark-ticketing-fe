@@ -20,8 +20,8 @@ function zoneLabel(name: string) {
 }
 
 /**
- * 계열별로 묶은 구역 카드 목록. 계열 제목을 누르면 그 계열의 구역 카드가 접히거나 펼쳐진다.
- * 기본은 모두 펼침. 카드를 누르면 지도에서 그 구역으로 줌인된다.
+ * 계열 토글 칩(줄바꿈으로 전부 보임)을 누르면 그 계열의 구역 이름 카드가 펼쳐진다. 여러 계열을 동시에 펼칠 수 있다.
+ * 카드를 누르면 지도에서 그 구역으로 줌인된다.
  */
 export function ZoneLegend({
   zones,
@@ -41,10 +41,10 @@ export function ZoneLegend({
     groups.set(info.family, list)
   }
   const families = FAMILY_ORDER.filter((family) => groups.has(family))
-  // 접힌 계열만 기억한다. 기본은 모두 펼쳐 둔다.
-  const [closed, setClosed] = useState<Set<Family>>(() => new Set())
+  // 계열 토글 상태. 처음에는 첫 계열만 펼쳐 둔다.
+  const [open, setOpen] = useState<Set<Family>>(() => new Set(families.slice(0, 1)))
   const toggle = (family: Family) =>
-    setClosed((prev) => {
+    setOpen((prev) => {
       const next = new Set(prev)
       if (next.has(family)) next.delete(family)
       else next.add(family)
@@ -54,37 +54,44 @@ export function ZoneLegend({
   if (families.length === 0) return null
 
   return (
-    // 목록이 길어서 패널 안에서만 세로로 스크롤한다. 가로 스크롤은 쓰지 않는다.
-    <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
-      {families.map((family) => {
-        const list = [...groups.get(family)!].sort((a, b) => a.tier.localeCompare(b.tier) || a.half - b.half)
-        const available = list.reduce((sum, { zone }) => sum + zone.availableSeats, 0)
-        const open = !closed.has(family)
-        return (
-          <section key={family} aria-label={family}>
+    <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
+      {/* 계열 토글은 줄바꿈으로 전부 보이게 한다. 가로 스크롤로 숨기지 않는다. */}
+      <div className="flex flex-wrap gap-1.5">
+        {families.map((family) => {
+          const on = open.has(family)
+          return (
             <button
+              key={family}
               type="button"
               onClick={() => toggle(family)}
-              aria-expanded={open}
-              className="press mb-2 flex w-full items-center justify-between rounded-xl px-1 py-1.5 text-left transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/60"
+              aria-pressed={on}
+              className="press rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors"
+              style={
+                on
+                  ? { backgroundColor: FAMILY_COLOR[family], borderColor: FAMILY_COLOR[family], color: '#fff' }
+                  : undefined
+              }
             >
-              <span className="flex items-center gap-2 text-sm font-bold">
-                <span className="size-2.5 rounded-full" style={{ backgroundColor: FAMILY_COLOR[family] }} />
-                {family}
-                <span className="tabular text-xs font-medium text-slate-500">{list.length}구역</span>
-              </span>
-              <span className="flex items-center gap-2">
-                <span className="tabular text-xs text-slate-500">잔여 {available.toLocaleString()}석</span>
-                <span
-                  aria-hidden
-                  className={['text-slate-400 transition-transform duration-300', open ? 'rotate-180' : ''].join(' ')}
-                >
-                  ▾
-                </span>
-              </span>
+              <span className={on ? '' : 'text-slate-600 dark:text-slate-300'}>{family}</span>
             </button>
-            {open && (
-              <div className="animate-fade-up grid grid-cols-2 gap-2">
+          )
+        })}
+      </div>
+
+      {families
+        .filter((family) => open.has(family))
+        .map((family) => {
+          const list = [...groups.get(family)!].sort((a, b) => a.tier.localeCompare(b.tier) || a.half - b.half)
+          const available = list.reduce((sum, { zone }) => sum + zone.availableSeats, 0)
+          return (
+            <section key={family} aria-label={family} className="animate-fade-up space-y-2">
+              <div className="flex items-baseline justify-between">
+                <h3 className="text-sm font-bold">{family}</h3>
+                <span className="tabular text-xs text-slate-500">
+                  {list.length}구역 · 잔여 {available.toLocaleString()}석
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
                 {list.map(({ zone }) => {
                   const active = zone.sectionId === activeSectionId
                   const ratio = zone.totalSeats === 0 ? 0 : zone.availableSeats / zone.totalSeats
@@ -110,28 +117,27 @@ export function ZoneLegend({
                           className="absolute inset-y-0 left-0 w-1"
                           style={{ backgroundColor: FAMILY_COLOR[family] }}
                         />
-                    )}
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-bold">{zoneLabel(zone.name)}</span>
-                      <span className="tabular text-[11px] font-semibold text-slate-500">
-                        {soldOut ? '매진' : `${zone.availableSeats}석`}
-                      </span>
-                    </div>
-                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                      <div
-                        className="h-full rounded-full transition-[width] duration-500"
-                        style={{ width: `${ratio * 100}%`, backgroundColor: FAMILY_COLOR[family] }}
-                      />
-                    </div>
-                    <span className="tabular text-xs text-slate-500">{zone.price.toLocaleString()}원</span>
-                  </button>
-                )
-              })}
-            </div>
-            )}
-          </section>
-        )
-      })}
+                      )}
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-bold">{zoneLabel(zone.name)}</span>
+                        <span className="tabular text-[11px] font-semibold text-slate-500">
+                          {soldOut ? '매진' : `${zone.availableSeats}석`}
+                        </span>
+                      </div>
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                        <div
+                          className="h-full rounded-full transition-[width] duration-500"
+                          style={{ width: `${ratio * 100}%`, backgroundColor: FAMILY_COLOR[family] }}
+                        />
+                      </div>
+                      <span className="tabular text-xs text-slate-500">{zone.price.toLocaleString()}원</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </section>
+          )
+        })}
     </div>
   )
 }
