@@ -4,6 +4,10 @@
 # 일정(날짜·시간)은 실제 경기 일정이 아니라 데모용 임의 값이다.
 # (ballpark-ticketing-be CLAUDE.md "테스트" 절의 예외 참고. 실제 KBO API 연동은 하지 않는다.)
 #
+# 구역 이름은 "중앙석 A" 같은 5개 구역(중앙석 / 1루·3루 필드석 / 1루·3루 외야석) x A~C 체계를
+# 따른다 — StadiumMap이 이 이름을 보고 실제 자리처럼 배치한다(src/components/StadiumMap.tsx 참고).
+# 이름이 이 체계를 벗어나면 StadiumMap은 원 둘레에 균등하게 나눠 그리는 방식으로 되돌아간다.
+#
 # 사용법: BASE_URL=http://localhost:8081 ./scripts/seed-demo-data.sh
 set -euo pipefail
 
@@ -27,9 +31,25 @@ create_section_with_seats() {
 	echo "  - ${name} (id=${section_id}, ${price}원, ${rows}x${cols})"
 }
 
-create_section_with_seats "내야 1루 R석" "R" 30000 5 10
-create_section_with_seats "내야 3루 R석" "R" 30000 5 10
-create_section_with_seats "외야 B석" "B" 12000 5 10
+create_section_with_seats "중앙석 A" "A" 50000 3 6
+create_section_with_seats "중앙석 B" "B" 40000 3 6
+create_section_with_seats "중앙석 C" "C" 30000 3 6
+
+create_section_with_seats "1루 필드석 A" "A" 35000 3 6
+create_section_with_seats "1루 필드석 B" "B" 28000 3 6
+create_section_with_seats "1루 필드석 C" "C" 22000 3 6
+
+create_section_with_seats "3루 필드석 A" "A" 35000 3 6
+create_section_with_seats "3루 필드석 B" "B" 28000 3 6
+create_section_with_seats "3루 필드석 C" "C" 22000 3 6
+
+create_section_with_seats "1루 외야석 A" "A" 15000 2 8
+create_section_with_seats "1루 외야석 B" "B" 12000 2 8
+create_section_with_seats "1루 외야석 C" "C" 9000 2 8
+
+create_section_with_seats "3루 외야석 A" "A" 15000 2 8
+create_section_with_seats "3루 외야석 B" "B" 12000 2 8
+create_section_with_seats "3루 외야석 C" "C" 9000 2 8
 
 echo "경기 생성 중..."
 

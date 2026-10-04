@@ -15,11 +15,9 @@ import { SeatMapGrid } from '../components/SeatMapGrid'
 import { StadiumMap } from '../components/StadiumMap'
 import { useBookingHistory } from '../hooks/useBookingHistory'
 import { useUserId } from '../hooks/useUserId'
-import { groupIntoBlocks } from '../lib/seatBlocks'
 import { STADIUM_PALETTE } from '../lib/stadiumPalette'
 import { teamColor } from '../lib/teamColors'
 import type { ReservationResponse, SeatMapItemResponse } from '../api/types'
-import type { StadiumSectionData } from '../components/StadiumMap'
 
 const MAX_SEATS = 4
 
@@ -122,14 +120,11 @@ export function BookingSeatMapPage() {
     group.items.push(item)
   }
 
-  const stadiumSections: StadiumSectionData[] = sections.map((section) => ({
+  const stadiumSections = (availabilityQuery.data ?? []).map((section) => ({
     sectionId: section.sectionId,
-    name: section.sectionName,
-    blocks: groupIntoBlocks(section.items).map((blockItems, index) => ({
-      label: `${index + 1}블록`,
-      available: blockItems.filter((item) => item.status === 'AVAILABLE').length,
-      total: blockItems.length,
-    })),
+    name: section.name,
+    availableSeats: section.availableSeats,
+    totalSeats: section.totalSeats,
   }))
 
   const effectiveSectionId = selectedSectionId ?? sections[0]?.sectionId ?? null
