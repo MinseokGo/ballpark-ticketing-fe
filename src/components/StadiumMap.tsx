@@ -462,6 +462,20 @@ export function StadiumMap({
     viewRef.current = view
   }, [view])
 
+  // 구역 목록이 지도 아래에 놓이는 좁은 화면에서는 고른 구역의 줌인이 화면 밖에서 일어나므로,
+  // 지도가 안 보이면 지도 쪽으로 스크롤한다. 넓은 화면은 지도와 목록이 나란히 있어서 움직이지 않는다.
+  // 크기 변화에는 반응하지 않도록 focus에만 건다.
+  useEffect(() => {
+    if (!focus) return
+    const el = wrapRef.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    const visible = rect.top >= 0 && rect.bottom <= window.innerHeight
+    if (visible) return
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    el.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' })
+  }, [focus])
+
   // 구역을 고르면 현재 화면에서 그 구역 중심으로 부드럽게 줌인한다.
   useEffect(() => {
     if (!focus) return
@@ -607,7 +621,7 @@ export function StadiumMap({
     setView((prev) => zoomAt(prev, size.w, size.h, size.w / 2, size.h / 2, clamp(prev.zoom * factor, MIN_ZOOM, MAX_ZOOM)))
 
   return (
-    <div ref={wrapRef} className="relative w-full select-none">
+    <div ref={wrapRef} className="relative w-full scroll-mt-24 select-none">
       <canvas
         ref={canvasRef}
         role="img"
