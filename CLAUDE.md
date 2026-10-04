@@ -49,6 +49,12 @@ npm run lint      # oxlint
 - `/booking`, `/booking/:gameId`(예매 화면)는 처음부터 실제 조회 API(경기 목록, 좌석맵, 구역별 잔여석)로
   서버 데이터를 그대로 보여주고, 예매·결제·취소도 실제 API를 호출한다. `localStorage`에 남기는 건 데모용
   사용자 ID(`src/hooks/useUserId.ts`) 하나뿐이다.
+- `/schedule`(팀별 일정)은 `GET /api/games`만 쓴다. 팀 목록도 백엔드 API가 없어서 경기 목록에서 모은다.
+  경기 목록 API는 페이지 최대 100개라 데모 데이터(5경기)는 한 번에 들어오지만, 경기가 100개를 넘으면
+  이 화면은 잘린다 — 그때 팀별 조회 API를 백엔드에 요청한다.
+- **경기 결과(스코어, 종료 상태)는 백엔드에 아직 없다.** `GameStatus`는 `SCHEDULED`/`OPEN`/`CLOSED`뿐이고
+  `CLOSED`는 "예매 마감"이지 "경기 종료"가 아니다. 그래서 결과 화면은 만들지 않았다. 아래 "결과·실시간 설계
+  메모"의 백엔드 선행 작업이 끝난 뒤에 붙인다.
 - 로컬 개발용 데이터는 백엔드 `seed` 프로필(`DemoDataSeeder`)이 만든다. 백엔드
   `CLAUDE.md` "테스트" 절의 예외에 따라, 이 데모 데이터는 구단 이름을 실제 KBO 10개 구단으로 쓴다(일정은
   임의 값, 실제 KBO API 연동은 하지 않는다).
@@ -61,7 +67,7 @@ src
 ├── components   여러 화면이 같이 쓰는 것 (Layout, Banner, GameCard, SeatGridPreview, StadiumMap[canvas])
 ├── hooks        useLocalRegistry, useUserId, useBookingHistory
 ├── lib          teamColors.ts(팀 이름 → 강조색, 장식용), stadiumLayout.ts(구역 이름 → 돔 배치) 등 순수 유틸
-├── pages        화면 단위 (HomePage, BookingGamesPage, BookingSeatMapPage, ProfilePage,
+├── pages        화면 단위 (HomePage, BookingGamesPage, BookingSeatMapPage, TeamSchedulePage, ProfilePage,
 │                AdminHomePage, SectionsPage, SeatsPage, GamesPage)
 └── constants.ts
 ```
@@ -138,6 +144,32 @@ src
   고르는 버튼 두 개 대신 "결제하기" 버튼 하나만 둔다(성공 경로만 기본 노출), "서버에 ~ API가 없어서"
   같은 구현 설명을 넣지 않는다. 이런 내부 사정은 코드 주석이나 이 문서에만 적는다. (관리자 화면은
   예외 — 처음부터 개발용 도구라고 밝혀 두었으므로 `POST /api/admin/...` 같은 설명을 유지해도 된다.)
+
+## 결과·실시간 경기 흐름 설계 메모 (미구현)
+
+아직 구현하지 않는다. 백엔드에 데이터 원천이 없어서 화면만 먼저 만들면 가짜 값을 보여주게 된다.
+백엔드 `CLAUDE.md`의 원칙("필요해지기 전에 기술을 넣지 않는다")에 따라, 기술 선택은 그 기능이 백엔드
+버전에 들어가는 시점에 확정한다. 지금 정해 둔 것과 열린 질문은 아래와 같다.
+
+**1. 경기 결과 (선행: 백엔드)**
+- 필요한 것: `Game`에 종료 상태(예: `FINISHED`)와 홈/원정 점수, 점수를 입력하는 관리자 API
+  (`PATCH /api/admin/games/{id}/result`), 경기 상세/목록 응답에 점수 필드 추가.
+- 프론트 화면: `/schedule`의 경기 카드에 종료된 경기는 점수를 표시하고, 팀 상세 일정에서 승패를 보여준다.
+  종료 전 경기는 점수 자리를 비워 둔다.
+- 열린 질문: 승패·무승부 판정을 서버가 할지(권장: 서버) 프론트가 할지, 우천 취소 같은 상태를 넣을지.
+
+**2. 실시간 경기 흐름 (이닝·점수 중계)**
+- 필요한 것: 서버 → 클라이언트 단방향 푸시. 데이터 원천(이닝, 점수, 상태 변경)도 백엔드에 있어야 한다.
+  원천은 관리자 입력일지 외부 피드일지 아직 정하지 않았다(외부 피드는 범위 밖에 가깝다).
+- 후보와 권장:
+  - **SSE(Server-Sent Events)를 1순위로 본다.** 단방향이고 HTTP 위에서 돌며, 끊기면 브라우저가 자동으로
+    다시 붙고(`Last-Event-ID`로 놓친 이벤트 복구), Spring MVC의 `SseEmitter`로 구현이 가볍다.
+  - **WebSocket**은 클라이언트가 서버로 자주 메시지를 보낼 때(채팅, 실시간 응원 등)만 고려한다. 중계 화면에는
+    과하다.
+  - **폴링**(TanStack Query `refetchInterval`, 10~15초)은 가장 단순하고 SSE 전까지의 대체 수단이다. 결과
+    화면은 폴링으로 시작해도 된다.
+- 열린 질문: 실시간 중계와 좌석 상태 실시간 반영(다른 사용자가 고른 좌석이 바로 사라지는 것)을 같은 채널로
+  묶을지. 좌석 쪽은 백엔드 v2(좌석 동시 선점) 이후의 문제라 시기가 다르다.
 
 ## 테스트
 
