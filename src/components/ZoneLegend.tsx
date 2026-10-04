@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { FAMILY_COLOR, parseSectionName, type Family } from '../lib/stadiumLayout'
 
 export type ZoneInfo = {
@@ -19,8 +20,8 @@ function zoneLabel(name: string) {
 }
 
 /**
- * 계열별로 묶은 구역 카드 목록. 탭으로 가리지 않고 모든 계열을 펼쳐서 보여준다.
- * 카드를 누르면 지도에서 그 구역으로 줌인된다. 카드마다 남은 좌석 비율을 막대로 보여준다.
+ * 계열별로 묶은 구역 카드 목록. 계열 제목을 누르면 그 계열의 구역 카드가 접히거나 펼쳐진다.
+ * 기본은 모두 펼침. 카드를 누르면 지도에서 그 구역으로 줌인된다.
  */
 export function ZoneLegend({
   zones,
@@ -40,50 +41,75 @@ export function ZoneLegend({
     groups.set(info.family, list)
   }
   const families = FAMILY_ORDER.filter((family) => groups.has(family))
+  // 접힌 계열만 기억한다. 기본은 모두 펼쳐 둔다.
+  const [closed, setClosed] = useState<Set<Family>>(() => new Set())
+  const toggle = (family: Family) =>
+    setClosed((prev) => {
+      const next = new Set(prev)
+      if (next.has(family)) next.delete(family)
+      else next.add(family)
+      return next
+    })
 
   if (families.length === 0) return null
 
   return (
     // 목록이 길어서 패널 안에서만 세로로 스크롤한다. 가로 스크롤은 쓰지 않는다.
-    <div className="min-h-0 flex-1 space-y-5 overflow-y-auto pr-1">
+    <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
       {families.map((family) => {
         const list = [...groups.get(family)!].sort((a, b) => a.tier.localeCompare(b.tier) || a.half - b.half)
         const available = list.reduce((sum, { zone }) => sum + zone.availableSeats, 0)
+        const open = !closed.has(family)
         return (
           <section key={family} aria-label={family}>
-            <div className="mb-2 flex items-center justify-between">
-              <h3 className="flex items-center gap-2 text-sm font-bold">
+            <button
+              type="button"
+              onClick={() => toggle(family)}
+              aria-expanded={open}
+              className="press mb-2 flex w-full items-center justify-between rounded-xl px-1 py-1.5 text-left transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/60"
+            >
+              <span className="flex items-center gap-2 text-sm font-bold">
                 <span className="size-2.5 rounded-full" style={{ backgroundColor: FAMILY_COLOR[family] }} />
                 {family}
-              </h3>
-              <span className="tabular text-xs text-slate-500">잔여 {available.toLocaleString()}석</span>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              {list.map(({ zone }) => {
-                const active = zone.sectionId === activeSectionId
-                const ratio = zone.totalSeats === 0 ? 0 : zone.availableSeats / zone.totalSeats
-                const soldOut = zone.availableSeats === 0
-                return (
-                  <button
-                    key={zone.sectionId}
-                    type="button"
-                    onClick={() => onSelect(zone.sectionId)}
-                    aria-pressed={active}
-                    className={[
-                      'press group relative flex flex-col gap-2 overflow-hidden rounded-2xl border p-3 pl-4 text-left transition-all',
-                      active
-                        ? 'bg-white shadow-md dark:bg-slate-900'
-                        : 'border-slate-200 bg-white hover:-translate-y-0.5 hover:shadow-sm dark:border-slate-800 dark:bg-slate-900',
-                    ].join(' ')}
-                    style={active ? { borderColor: FAMILY_COLOR[family] } : undefined}
-                  >
-                    {/* 선택 표시는 카드 안쪽에 그린다. 바깥에 그리면 스크롤 영역에 잘린다. */}
-                    {active && (
-                      <span
-                        aria-hidden
-                        className="absolute inset-y-0 left-0 w-1"
-                        style={{ backgroundColor: FAMILY_COLOR[family] }}
-                      />
+                <span className="tabular text-xs font-medium text-slate-500">{list.length}구역</span>
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="tabular text-xs text-slate-500">잔여 {available.toLocaleString()}석</span>
+                <span
+                  aria-hidden
+                  className={['text-slate-400 transition-transform duration-300', open ? 'rotate-180' : ''].join(' ')}
+                >
+                  ▾
+                </span>
+              </span>
+            </button>
+            {open && (
+              <div className="animate-fade-up grid grid-cols-2 gap-2">
+                {list.map(({ zone }) => {
+                  const active = zone.sectionId === activeSectionId
+                  const ratio = zone.totalSeats === 0 ? 0 : zone.availableSeats / zone.totalSeats
+                  const soldOut = zone.availableSeats === 0
+                  return (
+                    <button
+                      key={zone.sectionId}
+                      type="button"
+                      onClick={() => onSelect(zone.sectionId)}
+                      aria-pressed={active}
+                      className={[
+                        'press group relative flex flex-col gap-2 overflow-hidden rounded-2xl border p-3 pl-4 text-left transition-all',
+                        active
+                          ? 'bg-white shadow-md dark:bg-slate-900'
+                          : 'border-slate-200 bg-white hover:-translate-y-0.5 hover:shadow-sm dark:border-slate-800 dark:bg-slate-900',
+                      ].join(' ')}
+                      style={active ? { borderColor: FAMILY_COLOR[family] } : undefined}
+                    >
+                      {/* 선택 표시는 카드 안쪽에 그린다. 바깥에 그리면 스크롤 영역에 잘린다. */}
+                      {active && (
+                        <span
+                          aria-hidden
+                          className="absolute inset-y-0 left-0 w-1"
+                          style={{ backgroundColor: FAMILY_COLOR[family] }}
+                        />
                     )}
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-bold">{zoneLabel(zone.name)}</span>
@@ -102,6 +128,7 @@ export function ZoneLegend({
                 )
               })}
             </div>
+            )}
           </section>
         )
       })}
