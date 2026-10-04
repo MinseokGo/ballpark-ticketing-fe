@@ -131,8 +131,12 @@ function buildLayout(sections: StadiumSectionSeats[]): Layout {
   }
 
   for (const { section, info } of parsed) {
-    const { family, tier } = info!
-    const [fStart, fEnd] = FAMILY_ANGLES[family]
+    const { family, tier, half } = info!
+    const [familyStart, familyEnd] = FAMILY_ANGLES[family]
+    // 계열 각도를 앞(1)·뒤(2) 블록으로 반씩 나눈다. 블록 번호가 없으면 계열 전체를 쓴다.
+    const span = familyEnd - familyStart
+    const fStart = half ? familyStart + ((half - 1) * span) / 2 : familyStart
+    const fEnd = half ? familyStart + (half * span) / 2 : familyEnd
     const innerBound = isOutfieldFamily(family) ? WALL_R : INFIELD_R
     const ringWidth = (OUTER_R - innerBound) / TIER_ORDER.length
     const tierIndex = TIER_ORDER.indexOf(tier)
@@ -185,9 +189,10 @@ function buildLayout(sections: StadiumSectionSeats[]): Layout {
     bands.push({ fStart, fEnd, bInner, bOuter, rowThickness, colStep, rows })
     const midAngle = (fStart + fEnd) / 2
     labels.push({ text: section.name, family: false, angle: midAngle, radius: (bInner + bOuter) / 2 })
-    if (tier === 'B') {
+    // 계열 이름표는 계열당 한 번만(B층, 앞 블록 쪽에서) 단다.
+    if (tier === 'B' && (half === null || half === 1)) {
       const familyRadius = innerBound + ringWidth * 1.5
-      labels.push({ text: family, family: true, angle: midAngle, radius: familyRadius })
+      labels.push({ text: family, family: true, angle: (familyStart + familyEnd) / 2, radius: familyRadius })
     }
   }
 

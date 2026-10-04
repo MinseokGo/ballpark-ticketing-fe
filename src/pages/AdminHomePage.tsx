@@ -26,7 +26,7 @@ export function AdminHomePage() {
         <p className="mt-1 text-slate-500">
           ballpark-ticketing-be의 관리자 API를 호출하는 화면이다. 일반적인 데모 일정은
           <code className="mx-1 rounded bg-slate-100 px-1.5 py-0.5 text-sm dark:bg-slate-800">
-            scripts/seed-demo-data.sh
+            seed 프로필
           </code>
           로 한 번에 만들고, 여기는 추가·수정이 필요할 때만 쓴다.
         </p>
