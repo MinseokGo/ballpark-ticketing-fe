@@ -198,7 +198,8 @@ export function BookingSeatMapPage() {
         )}
       </div>
 
-      {stadiumSections.length > 0 && (
+      <div className="space-y-6 lg:grid lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start lg:gap-6 lg:space-y-0">
+        {stadiumSections.length > 0 && (
         <div className="overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-b from-sky-50 via-white to-white p-3 shadow-sm dark:border-slate-800 dark:from-slate-900 dark:via-slate-900 dark:to-slate-950">
           <StadiumMap
             sections={stadiumSections}
@@ -211,7 +212,7 @@ export function BookingSeatMapPage() {
       )}
 
       {zoneInfos.length > 0 && (
-        <section className="rounded-3xl border border-slate-200 p-5 dark:border-slate-800">
+        <section className="rounded-3xl border border-slate-200 p-5 lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto dark:border-slate-800">
           <div className="mb-4 flex items-baseline justify-between">
             <h2 className="font-bold">구역 둘러보기</h2>
             <p className="text-xs text-slate-500">구역을 누르면 지도에서 그 자리로 줌인돼요</p>
@@ -225,6 +226,7 @@ export function BookingSeatMapPage() {
           />
         </section>
       )}
+      </div>
 
       {seatMapQuery.isPending && <Skeleton className="h-[420px]" />}
 
@@ -242,7 +244,7 @@ export function BookingSeatMapPage() {
 
       {!reservation && (
         <div className="animate-slide-up fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white/95 shadow-[0_-8px_24px_-12px_rgba(15,23,42,0.18)] backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
-          <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-4">
+          <div className="flex w-full items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-10">
             <p className="text-sm">
               선택한 좌석 <strong className="tabular">{selectedSeatIds.size}</strong> / {MAX_SEATS}
               {selectedSeatIds.size > 0 && (
@@ -263,7 +265,7 @@ export function BookingSeatMapPage() {
 
       {reservation && (
         <div className="animate-slide-up fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white/95 shadow-[0_-8px_24px_-12px_rgba(15,23,42,0.18)] backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
-          <div className="mx-auto max-w-5xl space-y-3 px-4 py-4">
+          <div className="w-full space-y-3 px-4 py-4 sm:px-6 lg:px-10">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-slate-500">예약 #{reservation.id}</p>
