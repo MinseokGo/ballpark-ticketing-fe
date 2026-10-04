@@ -2,6 +2,11 @@ import { Link } from 'react-router-dom'
 
 const CARDS = [
   {
+    to: '/booking',
+    title: '예매하기',
+    description: '경기를 골라 좌석맵에서 좌석을 선택하고 예매·Mock 결제·취소까지 해 본다.',
+  },
+  {
     to: '/sections',
     title: '구역 등록',
     description: '좌석 등급·가격 단위인 구역(Section)을 만든다.',
@@ -24,17 +29,17 @@ export function DashboardPage() {
       <div>
         <h1 className="text-2xl font-bold">관리자 콘솔</h1>
         <p className="mt-1 text-neutral-600 dark:text-neutral-400">
-          ballpark-ticketing-be의 관리자 API(2단계)를 호출하는 화면이다.
+          ballpark-ticketing-be의 관리자·조회·예매 API를 호출하는 화면이다.
         </p>
       </div>
 
       <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
-        백엔드에는 아직 조회(GET) API가 없다(3단계 "조회 API"에서 추가될 예정). 그래서 이 화면은 등록 결과를
-        그 자리에서 보여주는 수준이고, 구역/경기 목록은 이 브라우저에 임시로 기록해 둔 것일 뿐 서버의 실제
-        목록이 아니다.
+        구역·좌석·경기 등록 화면(아래 3개)은 아직 목록 조회 API를 안 쓴다 — "이 브라우저에서 등록한 것" 표는
+        localStorage 메모일 뿐 서버의 실제 목록이 아니다. 반면 "예매하기"는 실제 조회 API(경기 목록, 좌석맵,
+        구역별 잔여석)로 서버 데이터를 그대로 보여준다.
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {CARDS.map((card) => (
           <Link
             key={card.to}

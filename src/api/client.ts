@@ -33,6 +33,18 @@ async function request<TResponse>(path: string, init?: RequestInit): Promise<TRe
   return (await response.json()) as TResponse
 }
 
-export function apiPost<TResponse, TBody>(path: string, body: TBody): Promise<TResponse> {
-  return request<TResponse>(path, { method: 'POST', body: JSON.stringify(body) })
+export function apiGet<TResponse>(path: string): Promise<TResponse> {
+  return request<TResponse>(path)
+}
+
+export function apiPost<TResponse, TBody>(
+  path: string,
+  body: TBody,
+  headers?: HeadersInit,
+): Promise<TResponse> {
+  return request<TResponse>(path, { method: 'POST', body: JSON.stringify(body), headers })
+}
+
+export function apiPatch<TResponse>(path: string): Promise<TResponse> {
+  return request<TResponse>(path, { method: 'PATCH' })
 }

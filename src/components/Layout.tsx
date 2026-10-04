@@ -2,6 +2,7 @@ import { NavLink, Outlet } from 'react-router-dom'
 
 const NAV_ITEMS = [
   { to: '/', label: '대시보드' },
+  { to: '/booking', label: '예매하기' },
   { to: '/sections', label: '구역 등록' },
   { to: '/seats', label: '좌석 일괄 등록' },
   { to: '/games', label: '경기 등록' },
