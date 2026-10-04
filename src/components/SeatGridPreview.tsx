@@ -28,7 +28,7 @@ export function SeatGridPreview({
         ))}
       </div>
       {truncated && (
-        <p className="mt-2 text-xs text-neutral-500">
+        <p className="mt-2 text-xs text-slate-500">
           전체 {rowCount}행 x {seatsPerRow}열 중 {visibleRows}행 x {visibleCols}열만 미리보기로
           표시했다.
         </p>

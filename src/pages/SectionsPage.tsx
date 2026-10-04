@@ -28,14 +28,14 @@ export function SectionsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold">구역 등록</h1>
-        <p className="mt-1 text-neutral-600 dark:text-neutral-400">
+        <h1 className="text-2xl font-extrabold tracking-tight">구역 등록</h1>
+        <p className="mt-1 text-slate-600 dark:text-slate-400">
           POST /api/admin/sections
         </p>
       </div>
 
       <form
-        className="space-y-4 rounded-lg border border-neutral-200 p-4 dark:border-neutral-800"
+        className="space-y-4 rounded-2xl border border-slate-200 p-4 dark:border-slate-800"
         onSubmit={(event) => {
           event.preventDefault()
           mutation.mutate()
@@ -49,7 +49,7 @@ export function SectionsPage() {
               value={name}
               onChange={(event) => setName(event.target.value)}
               placeholder="Infield 101"
-              className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900"
+              className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-900"
             />
           </label>
           <label className="block text-sm">
@@ -59,7 +59,7 @@ export function SectionsPage() {
               value={grade}
               onChange={(event) => setGrade(event.target.value)}
               placeholder="R"
-              className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900"
+              className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-900"
             />
           </label>
           <label className="block text-sm">
@@ -71,14 +71,14 @@ export function SectionsPage() {
               value={price}
               onChange={(event) => setPrice(event.target.value)}
               placeholder="30000"
-              className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900"
+              className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-900"
             />
           </label>
         </div>
         <button
           type="submit"
           disabled={mutation.isPending}
-          className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-neutral-900"
+          className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
         >
           {mutation.isPending ? '등록 중...' : '구역 등록'}
         </button>
@@ -93,15 +93,15 @@ export function SectionsPage() {
 
       <div>
         <h2 className="font-semibold">이 브라우저에서 등록한 구역</h2>
-        <p className="mb-2 text-xs text-neutral-500">
+        <p className="mb-2 text-xs text-slate-500">
           서버 조회 API가 없어 이 목록은 localStorage 기록일 뿐이다. 좌석 등록 화면에서 구역을
           고를 때 쓴다.
         </p>
         {sections.length === 0 ? (
-          <p className="text-sm text-neutral-500">아직 등록한 구역이 없다.</p>
+          <p className="text-sm text-slate-500">아직 등록한 구역이 없다.</p>
         ) : (
           <table className="w-full text-left text-sm">
-            <thead className="text-neutral-500">
+            <thead className="text-slate-500">
               <tr>
                 <th className="py-1 pr-4">ID</th>
                 <th className="py-1 pr-4">이름</th>
@@ -111,7 +111,7 @@ export function SectionsPage() {
             </thead>
             <tbody>
               {sections.map((section) => (
-                <tr key={section.id} className="border-t border-neutral-200 dark:border-neutral-800">
+                <tr key={section.id} className="border-t border-slate-200 dark:border-slate-800">
                   <td className="py-1 pr-4">{section.id}</td>
                   <td className="py-1 pr-4">{section.name}</td>
                   <td className="py-1 pr-4">{section.grade}</td>

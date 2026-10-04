@@ -40,6 +40,76 @@ export type GameResponse = {
   gameSeatCount: number
 }
 
+export type PageResponse<T> = {
+  content: T[]
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
+}
+
+export type GameSummaryResponse = {
+  id: number
+  homeTeam: string
+  awayTeam: string
+  startAt: string
+  status: GameStatus
+}
+
+export type SeatMapItemResponse = {
+  gameSeatId: number
+  seatId: number
+  rowNo: number
+  seatNo: number
+  sectionId: number
+  sectionName: string
+  grade: string
+  status: GameSeatStatus
+}
+
+export type GameSeatStatus = 'AVAILABLE' | 'HELD' | 'SOLD'
+
+export type SectionAvailabilityResponse = {
+  sectionId: number
+  name: string
+  grade: string
+  price: number
+  totalSeats: number
+  availableSeats: number
+  heldSeats: number
+  soldSeats: number
+}
+
+export type ReservationCreateRequest = {
+  gameSeatIds: number[]
+}
+
+export type ReservationStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED'
+
+export type ReservationResponse = {
+  id: number
+  userId: number
+  gameId: number
+  status: ReservationStatus
+  totalPrice: number
+  gameSeatIds: number[]
+  createdAt: string
+}
+
+export type PaymentCreateRequest = {
+  success: boolean
+}
+
+export type PaymentStatus = 'PENDING' | 'PAID' | 'FAILED'
+
+export type PaymentResponse = {
+  id: number
+  reservationId: number
+  amount: number
+  status: PaymentStatus
+  createdAt: string
+}
+
 export type FieldError = {
   field: string
   reason: string
