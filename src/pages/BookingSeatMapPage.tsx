@@ -14,6 +14,7 @@ import { ErrorBanner } from '../components/Banner'
 import { Celebration } from '../components/Celebration'
 import { Skeleton } from '../components/Skeleton'
 import { StadiumMap, type StadiumSectionSeats } from '../components/StadiumMap'
+import { SeatStatusLegend } from '../components/SeatStatusLegend'
 import { ZoneLegend } from '../components/ZoneLegend'
 import { useBookingHistory } from '../hooks/useBookingHistory'
 import { useUserId } from '../hooks/useUserId'
@@ -224,21 +225,12 @@ export function BookingSeatMapPage() {
               setFocus((prev) => ({ sectionId, nonce: (prev?.nonce ?? 0) + 1 }))
             }
           />
+          <SeatStatusLegend />
         </section>
       )}
       </div>
 
       {seatMapQuery.isPending && <Skeleton className="h-[420px]" />}
-
-      <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
-        <span className="flex items-center gap-1">
-          <span className="inline-block size-3 rounded-full border border-slate-300 bg-slate-300" /> 선점·판매됨
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="inline-block size-3 rounded-full border border-emerald-600 bg-emerald-500" /> 선택함
-        </span>
-        <span>· 색이 있는 조각은 그 구역의 예매 가능한 좌석이에요</span>
-      </div>
 
       {activeMutationError && <ErrorBanner error={activeMutationError as ApiError} />}
 

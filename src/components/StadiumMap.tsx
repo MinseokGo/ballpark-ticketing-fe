@@ -7,7 +7,7 @@ import {
   isOutfieldFamily,
   parseSectionName,
 } from '../lib/stadiumLayout'
-import { STADIUM_PALETTE } from '../lib/stadiumPalette'
+import { SEAT_STATUS_COLOR, STADIUM_PALETTE } from '../lib/stadiumPalette'
 import type { SeatMapItemResponse } from '../api/types'
 
 // 좌석은 수만 개라 DOM이 아니라 canvas에 그린다. 돔 기하는 "원 좌표계(CX, CY, 반지름, 각도)"로 계산하고,
@@ -30,7 +30,6 @@ const MIN_ZOOM = 1
 const MAX_ZOOM = 40
 const TAP_SLOP = 6
 
-const SELECTED_COLOR = '#10B981'
 
 // 같은 구역 계열 안에서 A(앞, 진함) → C(뒤, 연함)으로 색을 한 단계씩 옅게 해서 층을 구분한다.
 const TIER_TINT = [0, 0.18, 0.36]
@@ -46,8 +45,6 @@ function tint(hex: string, amount: number): string {
   const b = mix(n & 255)
   return `#${[r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('')}`
 }
-const HELD_COLOR = '#FBBF24'
-const SOLD_COLOR = '#94A3B8'
 
 const STATUS_LABEL: Record<string, string> = {
   AVAILABLE: '예매 가능',
@@ -324,17 +321,17 @@ function drawStadium(
   // 좌석: 선택 > 예매 가능(구역 색) > 선점 > 판매 완료 순
   for (const cell of layout.cells) {
     if (selectedIds.has(cell.item.gameSeatId)) {
-      ctx.fillStyle = SELECTED_COLOR
+      ctx.fillStyle = SEAT_STATUS_COLOR.selected
       ctx.globalAlpha = 1
     } else if (cell.item.status === 'AVAILABLE') {
       ctx.fillStyle = cell.color
       ctx.globalAlpha = 0.9
     } else if (cell.item.status === 'HELD') {
-      ctx.fillStyle = HELD_COLOR
-      ctx.globalAlpha = 0.55
+      ctx.fillStyle = SEAT_STATUS_COLOR.held
+      ctx.globalAlpha = 1
     } else {
-      ctx.fillStyle = SOLD_COLOR
-      ctx.globalAlpha = 0.4
+      ctx.fillStyle = SEAT_STATUS_COLOR.sold
+      ctx.globalAlpha = 1
     }
     ctx.fill(cell.path)
   }
@@ -353,16 +350,19 @@ function drawStadium(
   ctx.lineWidth = 1
   ctx.stroke()
 
-  // 범례에서 고른 구역: 경계선과 옅은 색으로 테두리를 친다.
+  // 구역 목록에서 고른 구역: 어떤 계열 색 위에서도 보이도록 흰 선 + 진한 선의 이중 테두리를 친다.
   if (focusSectionId !== null) {
     const band = layout.bands.find((b) => b.sectionId === focusSectionId)
     if (band) {
       ctx.globalAlpha = 1
-      ctx.fillStyle = 'rgba(37, 99, 235, 0.12)'
-      ctx.fill(band.outline)
-      ctx.strokeStyle = '#2563EB'
-      ctx.lineWidth = 1.6
       ctx.lineJoin = 'round'
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.08)'
+      ctx.fill(band.outline)
+      ctx.strokeStyle = '#FFFFFF'
+      ctx.lineWidth = 4
+      ctx.stroke(band.outline)
+      ctx.strokeStyle = '#0F172A'
+      ctx.lineWidth = 1.8
       ctx.stroke(band.outline)
     }
   }
