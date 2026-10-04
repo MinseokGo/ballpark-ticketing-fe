@@ -86,7 +86,12 @@ type Layout = {
   bands: Band[]
   // 이름 체계를 모르는 옛 데이터일 때 쓰는 통짜 조각. 좌석 단위로 못 쪼개니 선택도 안 된다.
   wedges: { path: Path2D; color: string; alpha: number }[]
+  // 구역 이름표. 축소 상태에선 구역 계열(예: "1루 외야석")만, 확대하면 층별 구역 이름("1루 외야석 B")을 보인다.
+  labels: { text: string; family: boolean; angle: number; radius: number }[]
 }
+
+// 이 배율 이상으로 확대하면 층별 구역 이름을 보여준다.
+const SECTION_LABEL_ZOOM = 2.5
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
 
@@ -109,6 +114,7 @@ function buildLayout(sections: StadiumSectionSeats[]): Layout {
   const cells: SeatCell[] = []
   const bands: Band[] = []
   const wedges: Layout['wedges'] = []
+  const labels: Layout['labels'] = []
 
   if (!recognized) {
     const slice = 360 / Math.max(sections.length, 1)
@@ -121,7 +127,7 @@ function buildLayout(sections: StadiumSectionSeats[]): Layout {
         alpha: 0.2 + ratio * 0.5,
       })
     })
-    return { cells, bands, wedges }
+    return { cells, bands, wedges, labels: [] }
   }
 
   for (const { section, info } of parsed) {
@@ -177,9 +183,15 @@ function buildLayout(sections: StadiumSectionSeats[]): Layout {
     })
 
     bands.push({ fStart, fEnd, bInner, bOuter, rowThickness, colStep, rows })
+    const midAngle = (fStart + fEnd) / 2
+    labels.push({ text: section.name, family: false, angle: midAngle, radius: (bInner + bOuter) / 2 })
+    if (tier === 'B') {
+      const familyRadius = innerBound + ringWidth * 1.5
+      labels.push({ text: family, family: true, angle: midAngle, radius: familyRadius })
+    }
   }
 
-  return { cells, bands, wedges }
+  return { cells, bands, wedges, labels }
 }
 
 function hitTest(layout: Layout, xc: number, yc: number): SeatCell | null {
@@ -314,6 +326,40 @@ function drawStadium(
     ctx.strokeStyle = '#0F172A'
     ctx.lineWidth = 0.9
     ctx.stroke(hovered.path)
+  }
+
+  drawLabels(ctx, layout, view, w, h, dpr)
+}
+
+function drawLabels(
+  ctx: CanvasRenderingContext2D,
+  layout: Layout,
+  view: View,
+  w: number,
+  h: number,
+  dpr: number,
+) {
+  const showSections = view.zoom >= SECTION_LABEL_ZOOM
+  const { k, ox, oy } = viewGeometry(w, h, view)
+  // 이름표는 좌표계가 찌그러지지 않도록 화면 좌표(CSS px)로 따로 그린다.
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+  ctx.font = '600 11px -apple-system, "Apple SD Gothic Neo", sans-serif'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+
+  for (const label of layout.labels) {
+    if (label.family === showSections) continue
+    const rad = (label.angle * Math.PI) / 180
+    const xc = CX + label.radius * Math.sin(rad)
+    const yc = CY - label.radius * Math.cos(rad)
+    const x = ox + k * (xc - CX)
+    const y = oy + k * VS * (yc - CY)
+    if (x < 0 || x > w || y < 0 || y > h) continue
+    const textWidth = ctx.measureText(label.text).width
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.72)'
+    ctx.fillRect(x - textWidth / 2 - 5, y - 9, textWidth + 10, 18)
+    ctx.fillStyle = '#FFFFFF'
+    ctx.fillText(label.text, x, y)
   }
 }
 
