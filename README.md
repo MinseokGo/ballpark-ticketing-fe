@@ -29,10 +29,11 @@ from what the server actually has (`src/hooks/useLocalRegistry.ts`).
 ## Local demo data
 
 The backend's own bulk-seeding step (its step 5) isn't built yet, so `scripts/seed-demo-data.sh` creates a
-small demo dataset through the admin API: 3 sections, seats, and 5 games (2 opened for booking). Team names
-are real KBO clubs — the backend's `CLAUDE.md` carves out an exception for demo/seed data specifically so the
-booking screen looks like a real schedule; the dates themselves are made up, and there's no real KBO API
-integration.
+demo dataset through the admin API: 15 sections (중앙석 / 1루·3루 필드석 / 1루·3루 외야석, each split into
+A/B/C price tiers — the naming `StadiumMap` reads to lay sections out like a real park), seats, and 5 games
+(2 opened for booking). Team names are real KBO clubs — the backend's `CLAUDE.md` carves out an exception for
+demo/seed data specifically so the booking screen looks like a real schedule; the dates themselves are made
+up, and there's no real KBO API integration.
 
 ```bash
 BASE_URL=http://localhost:8081 ./scripts/seed-demo-data.sh   # point at wherever the backend is running

@@ -1,12 +1,16 @@
 import { STADIUM_PALETTE } from '../lib/stadiumPalette'
 
-const SIZE = 320
-const CENTER = SIZE / 2
+// 원이 아니라 위아래로 긴 타원으로 그린다 — 홈플레이트~외야 방향이 더 길어 실제 구장 돔에 가깝다.
+const SIZE_X = 320
+const SIZE_Y = 400
+const CENTER_X = SIZE_X / 2
+const CENTER_Y = 200
+const VERTICAL_SCALE = 1.3
 
 // 파울 구역(중앙석·필드석)은 안쪽부터, 페어 구역(외야석)은 외야 벽 너머부터 좌석이 시작한다.
-const INFIELD_R = 45
-const WALL_R = 80
-const OUTER_R = 145
+const INFIELD_R = 40
+const WALL_R = 72
+const OUTER_R = 130
 
 type Tier = 'A' | 'B' | 'C'
 
@@ -42,7 +46,7 @@ function parseSectionName(name: string): { family: Family; tier: Tier } | null {
 
 function polarToCartesian(r: number, angleDeg: number) {
   const rad = (angleDeg * Math.PI) / 180
-  return { x: CENTER + r * Math.sin(rad), y: CENTER - r * Math.cos(rad) }
+  return { x: CENTER_X + r * Math.sin(rad), y: CENTER_Y - r * Math.cos(rad) * VERTICAL_SCALE }
 }
 
 function sectorPath(startAngle: number, endAngle: number, innerR: number, outerR: number) {
@@ -53,9 +57,9 @@ function sectorPath(startAngle: number, endAngle: number, innerR: number, outerR
   const largeArc = endAngle - startAngle > 180 ? 1 : 0
   return [
     `M ${outerStart.x} ${outerStart.y}`,
-    `A ${outerR} ${outerR} 0 ${largeArc} 1 ${outerEnd.x} ${outerEnd.y}`,
+    `A ${outerR} ${outerR * VERTICAL_SCALE} 0 ${largeArc} 1 ${outerEnd.x} ${outerEnd.y}`,
     `L ${innerEnd.x} ${innerEnd.y}`,
-    `A ${innerR} ${innerR} 0 ${largeArc} 0 ${innerStart.x} ${innerStart.y}`,
+    `A ${innerR} ${innerR * VERTICAL_SCALE} 0 ${largeArc} 0 ${innerStart.x} ${innerStart.y}`,
     'Z',
   ].join(' ')
 }
@@ -66,17 +70,17 @@ function Field() {
   return (
     <>
       <path d={sectorPath(-45, 45, INFIELD_R, WALL_R)} fill="#4ADE80" />
-      <circle cx={CENTER} cy={CENTER} r={INFIELD_R} fill="#86EFAC" />
+      <circle cx={CENTER_X} cy={CENTER_Y} r={INFIELD_R} fill="#86EFAC" />
       <rect
-        x={CENTER - 18}
-        y={CENTER + 10}
+        x={CENTER_X - 18}
+        y={CENTER_Y + 10}
         width={36}
         height={36}
         fill="#D2B48C"
         rx={3}
-        transform={`rotate(45 ${CENTER} ${CENTER + 28})`}
+        transform={`rotate(45 ${CENTER_X} ${CENTER_Y + 28})`}
       />
-      <circle cx={CENTER} cy={CENTER + 28} r={3.5} fill="#fff" />
+      <circle cx={CENTER_X} cy={CENTER_Y + 28} r={3.5} fill="#fff" />
     </>
   )
 }
@@ -150,7 +154,7 @@ export function StadiumMap({
   const allRecognized = parsed.length > 0 && parsed.every((item) => item.parsed !== null)
 
   return (
-    <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="mx-auto w-full max-w-sm">
+    <svg viewBox={`0 0 ${SIZE_X} ${SIZE_Y}`} className="mx-auto w-full max-w-xs">
       {allRecognized
         ? parsed.map(({ section, parsed: info }) => {
             const { family, tier } = info!
