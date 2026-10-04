@@ -12,15 +12,19 @@ visible instead of just reading raw JSON responses.
 
 ## Current scope
 
-The admin pages (`/sections`, `/seats`, `/games`) only call write (`POST`) endpoints and don't list existing
-data — their "registered in this browser" tables are a `localStorage` memo used to pick a section/game id in
-another form, not a real data source, and can drift from what the server actually has
-(`src/hooks/useLocalRegistry.ts`).
+The consumer-facing pages — home (`/`), booking (`/booking`, `/booking/:gameId`), and the profile page
+(`/profile`) — are the main app. They call the backend's query API for everything they show (game list, seat
+map, per-section availability) and the reservation/payment/cancel API for every action. The seat map is drawn
+as a stadium "dome" (`src/components/StadiumMap.tsx`, SVG) you tap to pick a section, then pick seats below it.
+`localStorage` is only used for a demo user id (`src/hooks/useUserId.ts`, standing in for real auth — the
+backend identifies users by the `X-User-Id` header; v1 has no login) and a "my bookings" history
+(`src/hooks/useBookingHistory.ts`, since there's no backend "list my reservations" endpoint yet).
 
-The booking pages (`/booking`, `/booking/:gameId`) are different: they call the backend's query API for
-everything they show (game list, seat map, per-section availability) and the reservation/payment/cancel API
-for every action. The only thing kept in `localStorage` there is a demo user id (`src/hooks/useUserId.ts`),
-standing in for real auth (the backend identifies users by the `X-User-Id` header; v1 has no login).
+The admin pages (`/admin`, `/admin/sections`, `/admin/seats`, `/admin/games`) are a secondary, de-emphasized
+area (one muted "관리자" link in the header) for when the seed script below isn't enough. They only call write
+(`POST`) endpoints and don't list existing data — their "registered in this browser" tables are a
+`localStorage` memo used to pick a section/game id in another form, not a real data source, and can drift
+from what the server actually has (`src/hooks/useLocalRegistry.ts`).
 
 ## Local demo data
 
@@ -38,11 +42,13 @@ BASE_URL=http://localhost:8081 ./scripts/seed-demo-data.sh   # point at wherever
 
 | Route | Calls | Notes |
 |---|---|---|
-| `/booking` | `GET /api/games` | Lists games; only `OPEN` ones link to the seat map. |
-| `/booking/:gameId` | `GET /api/games/{id}/seats`, `GET /api/games/{id}/sections`, `POST .../reservations`, `POST /api/reservations/{id}/payments`, `POST /api/reservations/{id}/cancel` | Pick up to 4 `AVAILABLE` seats, reserve, then mark the mock payment success/failure or cancel. The seat map re-fetches after every action, so status colors always reflect the server. |
-| `/sections` | `POST /api/admin/sections` | Section name must be unique (409 `SEAT-006` otherwise) |
-| `/seats` | `POST /api/admin/sections/{sectionId}/seats` | Fills a `rowCount` x `seatsPerRow` grid; renders a preview grid (capped at 20x30) |
-| `/games` | `POST /api/admin/games` | Also creates one `GameSeat` per existing `Seat`; `ticketOpenAt` must be before `startAt` (400 `GAME-001` otherwise) |
+| `/` | `GET /api/games` | Home: hero + a preview of upcoming games. |
+| `/booking` | `GET /api/games` | Full game list; only `OPEN` ones link to the seat map. |
+| `/booking/:gameId` | `GET /api/games/{id}`, `.../seats`, `.../sections`, `POST .../reservations`, `POST /api/reservations/{id}/payments`, `POST /api/reservations/{id}/cancel` | Tap a section on the stadium map, pick up to 4 `AVAILABLE` seats, reserve, then mark the mock payment success/failure or cancel. Re-fetches after every action so status always reflects the server. |
+| `/profile` | — (local only) | Demo user id, and this browser's booking history (`useBookingHistory`). |
+| `/admin/sections` | `POST /api/admin/sections` | Section name must be unique (409 `SEAT-006` otherwise) |
+| `/admin/seats` | `POST /api/admin/sections/{sectionId}/seats` | Fills a `rowCount` x `seatsPerRow` grid; renders a preview grid (capped at 20x30) |
+| `/admin/games` | `POST /api/admin/games` | Also creates one `GameSeat` per existing `Seat`; `ticketOpenAt` must be before `startAt` (400 `GAME-001` otherwise) |
 
 ## Running locally
 

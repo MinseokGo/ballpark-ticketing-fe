@@ -42,9 +42,10 @@ npm run lint      # oxlint
 
 - 2026-10-04 기준 백엔드는 관리자 등록(구역·좌석·경기, 예매 오픈), 조회(경기 목록/상세, 구역별 잔여석,
   좌석맵), 예매·Mock 결제·취소까지 다 있다(백엔드 1~4단계).
-- `/sections`, `/seats`, `/games`(관리자 등록 화면)는 여전히 목록 조회를 안 쓴다 — "이 브라우저에서
-  등록한 것" 표는 `localStorage` 메모일 뿐이다(`src/hooks/useLocalRegistry.ts`). 이 화면들이 구역·경기
-  목록을 실제로 조회하게 바꿀지는 아직 정하지 않았다.
+- `/admin`, `/admin/sections`, `/admin/seats`, `/admin/games`(관리자 등록 화면)는 여전히 목록 조회를
+  안 쓴다 — "이 브라우저에서 등록한 것" 표는 `localStorage` 메모일 뿐이다(`src/hooks/useLocalRegistry.ts`).
+  경기 일정은 보통 `scripts/seed-demo-data.sh`로 한 번에 만들고, 이 화면들은 추가·수정이 필요할 때만
+  쓰는 보조 도구라 메인 내비게이션에는 "관리자" 링크 하나로만 둔다.
 - `/booking`, `/booking/:gameId`(예매 화면)는 처음부터 실제 조회 API(경기 목록, 좌석맵, 구역별 잔여석)로
   서버 데이터를 그대로 보여주고, 예매·결제·취소도 실제 API를 호출한다. `localStorage`에 남기는 건 데모용
   사용자 ID(`src/hooks/useUserId.ts`) 하나뿐이다.
@@ -57,9 +58,11 @@ npm run lint      # oxlint
 ```
 src
 ├── api          client.ts(fetch 래퍼, ProblemDetail 에러), admin.ts/booking.ts(엔드포인트별 함수), types.ts(요청/응답 타입)
-├── components   여러 화면이 같이 쓰는 것 (Layout, Banner, SeatGridPreview, SeatMapGrid)
-├── hooks        useLocalRegistry, useUserId 등
-├── pages        화면 단위 (DashboardPage, Sections/Seats/GamesPage, BookingGamesPage, BookingSeatMapPage)
+├── components   여러 화면이 같이 쓰는 것 (Layout, Banner, GameCard, SeatGridPreview, SeatMapGrid)
+├── hooks        useLocalRegistry, useUserId, useBookingHistory
+├── lib          teamColors.ts(팀 이름 → 강조색, 장식용) 등 순수 유틸
+├── pages        화면 단위 (HomePage, BookingGamesPage, BookingSeatMapPage, ProfilePage,
+│                AdminHomePage, SectionsPage, SeatsPage, GamesPage)
 └── constants.ts
 ```
 
@@ -82,6 +85,28 @@ src
 - 스타일은 Tailwind 유틸리티 클래스로 한다. 다크 모드는 `dark:` variant로 같이 처리한다(별도 다크모드
   토글은 두지 않는다. 시스템 설정을 따른다).
 - 주석은 "왜"가 필요한 곳에만, 한국어로.
+
+## 디자인
+
+토스·당근마켓·카카오·배민 느낌의 "깔끔한 국내 빅테크 서비스" 톤을 따른다. 새 화면/컴포넌트를 만들 때는
+아래를 기본값으로 쓰고, 벗어날 이유가 있을 때만 벗어난다.
+
+- 색: 배경은 `slate-50`(dark: `slate-950`), 카드는 `white`(dark: `slate-900`), 테두리는 `slate-200`(dark:
+  `slate-800`). 본문 글자는 `slate-900`/`slate-50`, 보조 설명은 `slate-500`. 주요 액션 버튼은 `blue-600`
+  (hover `blue-700`), 위험한 액션(결제 실패 처리, 취소)은 `red-600`/outline, 성공 상태는 `emerald`.
+- 모양: 카드·패널은 `rounded-2xl`, 입력 필드·작은 버튼은 `rounded-xl`, 배지·태그·둥근 버튼은
+  `rounded-full`. 그림자는 과하게 쓰지 않는다(`shadow-md` 이하, hover에서만).
+- 타이포: 제목은 `font-extrabold tracking-tight`, 숫자(가격·좌석 번호 등)는 `.tabular` 클래스로 자릿수가
+  흔들리지 않게 한다.
+- 팀 강조색: `src/lib/teamColors.ts`의 `teamColor(teamName)`을 쓴다. 실제 구단 로고가 아니라 카드를
+  구분하기 쉽게 하는 장식용 배색이라는 걸 명확히 한다(주석·커밋 메시지에 "장식용"이라고 적어 둔다).
+- 좌석 선택 화면의 구역 고르기는 평평한 표가 아니라 `src/components/StadiumMap.tsx`처럼 경기장을 위에서
+  내려다본 돔 모양(SVG, 구역마다 동그란 조각)으로 보여준다. 구역을 하나 고르면 그 아래에 그 구역의 실제
+  좌석 격자(`SeatMapGrid`)가 나온다 — 지도에서 구역 선택 → 좌석 선택, 2단계 흐름을 유지한다.
+- 내비게이션: 상단 `Layout`의 메인 탭은 홈(`/`)·예매(`/booking`)·마이페이지(`/profile`) 3개만 둔다.
+  관리자 도구는 눈에 덜 띄는 보조 링크(`/admin`) 하나로 묶는다 — 일반 사용자가 쓸 화면이 아니다.
+- 모바일 폭(390px 기준)에서 먼저 보고 깨지지 않는지 확인한다. 화면 하단에 고정되는 액션 바(예매 화면의
+  "예매하기"/결제 버튼)는 `fixed inset-x-0 bottom-0` + `mx-auto max-w-3xl`로 `Layout`의 본문 폭과 맞춘다.
 
 ## 테스트
 
@@ -106,7 +131,7 @@ Library를 추가한다. 지금은 `npm run build`(타입 체크)와 `npm run li
 | 구분 | 값 |
 |---|---|
 | 타입 | `타입: 기능`, `타입: 버그`, `타입: 리팩터링`, `타입: 설계`, `타입: 설정`, `타입: 문서`, `타입: 테스트` |
-| 화면 | `화면: 구역`, `화면: 좌석`, `화면: 경기`, `화면: 예매`, `화면: 공통` |
+| 화면 | `화면: 홈`, `화면: 예매`, `화면: 마이페이지`, `화면: 구역`, `화면: 좌석`, `화면: 경기`, `화면: 공통` |
 | 우선순위 | `우선순위: 높음`, `우선순위: 보통`, `우선순위: 낮음` |
 | 버전 | `버전: v1`, `버전: v2` |
 
@@ -120,6 +145,7 @@ Library를 추가한다. 지금은 `npm run build`(타입 체크)와 `npm run li
 | 0 | 프로젝트 뼈대 (Vite + React + TS + Tailwind + Router + Query) | 완료 |
 | 1 | 관리자 콘솔: 구역 등록, 좌석 일괄 등록(격자 미리보기), 경기 등록 | 완료 |
 | 2 | 사용자 예매 화면: 경기 목록, 좌석맵 선택, 예매/Mock 결제/취소 | 완료 |
+| 3 | 비주얼 리디자인: 홈/마이페이지 신설, 경기장 돔 모양 구역 선택(`StadiumMap`), 관리자 화면을 `/admin`으로 분리 | 완료 |
 
-열린 과제: 관리자 콘솔(`/sections`, `/seats`, `/games`)의 `localStorage` 메모를 실제 조회 API로 교체할지
-결정한다. 지금은 예매 화면만 실제 조회를 쓴다.
+열린 과제: 관리자 콘솔(`/admin/*`)의 `localStorage` 메모를 실제 조회 API로 교체할지 결정한다. 지금은
+예매 화면만 실제 조회를 쓴다.
