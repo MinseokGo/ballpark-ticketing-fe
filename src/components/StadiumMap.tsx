@@ -1,3 +1,10 @@
+import {
+  FAMILY_ANGLES,
+  FAMILY_COLOR,
+  TIER_ORDER,
+  isOutfieldFamily,
+  parseSectionName,
+} from '../lib/stadiumLayout'
 import { STADIUM_PALETTE } from '../lib/stadiumPalette'
 
 // 원이 아니라 위아래로 긴 타원으로 그린다 — 홈플레이트~외야 방향이 더 길어 실제 구장 돔에 가깝다.
@@ -11,38 +18,6 @@ const VERTICAL_SCALE = 1.3
 const INFIELD_R = 40
 const WALL_R = 72
 const OUTER_R = 130
-
-type Tier = 'A' | 'B' | 'C'
-
-type Family = '중앙석' | '1루 필드석' | '1루 외야석' | '3루 필드석' | '3루 외야석'
-
-// 0도 = 외야 정면(타자 배경판 방향), 시계방향. 180도 = 홈플레이트 뒤.
-// 가운데 90도(-45~45)는 페어 구역(필드+외야석), 나머지 270도는 파울 구역(중앙석+필드석).
-const FAMILY_ANGLES: Record<Family, [number, number]> = {
-  '1루 외야석': [0, 45],
-  '1루 필드석': [45, 135],
-  중앙석: [135, 225],
-  '3루 필드석': [225, 315],
-  '3루 외야석': [315, 360],
-}
-
-const FAMILY_COLOR: Record<Family, string> = {
-  중앙석: STADIUM_PALETTE[0]!,
-  '1루 필드석': STADIUM_PALETTE[1]!,
-  '1루 외야석': STADIUM_PALETTE[2]!,
-  '3루 필드석': STADIUM_PALETTE[3]!,
-  '3루 외야석': STADIUM_PALETTE[4]!,
-}
-
-const TIER_ORDER: Tier[] = ['A', 'B', 'C']
-
-function parseSectionName(name: string): { family: Family; tier: Tier } | null {
-  const match = /^(중앙석|1루 필드석|1루 외야석|3루 필드석|3루 외야석)\s*([ABC])$/.exec(name.trim())
-  if (!match) {
-    return null
-  }
-  return { family: match[1] as Family, tier: match[2] as Tier }
-}
 
 function polarToCartesian(r: number, angleDeg: number) {
   const rad = (angleDeg * Math.PI) / 180
@@ -155,12 +130,20 @@ export function StadiumMap({
 
   return (
     <svg viewBox={`0 0 ${SIZE_X} ${SIZE_Y}`} className="mx-auto w-full max-w-xs">
+      <defs>
+        {/* 필드 쪽에서 빛이 퍼지는 느낌을 주는 은은한 하이라이트 — 평평한 조각보다 자연스럽게 보이게 한다. */}
+        <radialGradient id="stadium-shine" cx="50%" cy="50%" r="60%">
+          <stop offset="0%" stopColor="#fff" stopOpacity="0.35" />
+          <stop offset="55%" stopColor="#fff" stopOpacity="0.08" />
+          <stop offset="100%" stopColor="#fff" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+
       {allRecognized
         ? parsed.map(({ section, parsed: info }) => {
             const { family, tier } = info!
             const [familyStart, familyEnd] = FAMILY_ANGLES[family]
-            const isOutfield = family === '1루 외야석' || family === '3루 외야석'
-            const innerBound = isOutfield ? WALL_R : INFIELD_R
+            const innerBound = isOutfieldFamily(family) ? WALL_R : INFIELD_R
             const tierIndex = TIER_ORDER.indexOf(tier)
             const ringWidth = (OUTER_R - innerBound) / TIER_ORDER.length
             return (
@@ -196,6 +179,14 @@ export function StadiumMap({
             )
           })}
 
+      <ellipse
+        cx={CENTER_X}
+        cy={CENTER_Y}
+        rx={OUTER_R}
+        ry={OUTER_R * VERTICAL_SCALE}
+        fill="url(#stadium-shine)"
+        className="pointer-events-none"
+      />
       <Field />
     </svg>
   )

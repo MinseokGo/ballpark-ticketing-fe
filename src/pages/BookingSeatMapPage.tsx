@@ -11,7 +11,7 @@ import {
 } from '../api/booking'
 import { ApiError } from '../api/client'
 import { ErrorBanner, SuccessBanner } from '../components/Banner'
-import { SeatMapGrid } from '../components/SeatMapGrid'
+import { SeatArcGrid } from '../components/SeatArcGrid'
 import { StadiumMap } from '../components/StadiumMap'
 import { useBookingHistory } from '../hooks/useBookingHistory'
 import { useUserId } from '../hooks/useUserId'
@@ -234,7 +234,12 @@ export function BookingSeatMapPage() {
             )}
           </div>
           <div className="overflow-x-auto">
-            <SeatMapGrid items={selectedSection.items} selectedIds={selectedSeatIds} onToggle={toggleSeat} />
+            <SeatArcGrid
+              items={selectedSection.items}
+              sectionName={selectedSection.sectionName}
+              selectedIds={selectedSeatIds}
+              onToggle={toggleSeat}
+            />
           </div>
         </div>
       )}
