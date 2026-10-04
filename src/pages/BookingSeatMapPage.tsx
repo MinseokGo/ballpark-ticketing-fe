@@ -15,11 +15,12 @@ import { Celebration } from '../components/Celebration'
 import { Skeleton } from '../components/Skeleton'
 import { StadiumMap, type StadiumSectionSeats } from '../components/StadiumMap'
 import { SeatStatusLegend } from '../components/SeatStatusLegend'
+import { SelectedSeatsBar, type SelectedSeat } from '../components/SelectedSeatsBar'
 import { ZoneLegend } from '../components/ZoneLegend'
 import { useBookingHistory } from '../hooks/useBookingHistory'
 import { useUserId } from '../hooks/useUserId'
 import { teamColor } from '../lib/teamColors'
-import type { ReservationResponse } from '../api/types'
+import type { ReservationResponse, SeatMapItemResponse } from '../api/types'
 
 const MAX_SEATS = 4
 
@@ -111,10 +112,11 @@ export function BookingSeatMapPage() {
   }
 
   // 좌석 수가 많아서 캔버스 배치 계산이 무겁다 — 데이터가 바뀔 때만 다시 묶는다.
-  const { stadiumSections, priceByGameSeatId } = useMemo(() => {
+  const { stadiumSections, priceByGameSeatId, seatByGameSeatId } = useMemo(() => {
     const priceBySectionId = new Map((availabilityQuery.data ?? []).map((section) => [section.sectionId, section.price] as const))
     const grouped = new Map<number, StadiumSectionSeats>()
     const priceByGameSeatId = new Map<number, number>()
+    const seatByGameSeatId = new Map<number, SeatMapItemResponse>()
     for (const item of seatMapQuery.data ?? []) {
       let group = grouped.get(item.sectionId)
       if (!group) {
@@ -128,11 +130,24 @@ export function BookingSeatMapPage() {
       }
       group.items.push(item)
       priceByGameSeatId.set(item.gameSeatId, group.price)
+      seatByGameSeatId.set(item.gameSeatId, item)
     }
-    return { stadiumSections: [...grouped.values()], priceByGameSeatId }
+    return { stadiumSections: [...grouped.values()], priceByGameSeatId, seatByGameSeatId }
   }, [seatMapQuery.data, availabilityQuery.data])
 
   const estimatedTotal = [...selectedSeatIds].reduce((sum, id) => sum + (priceByGameSeatId.get(id) ?? 0), 0)
+  // 고른 순서대로 보여준다. Set은 삽입 순서를 유지하므로 그대로 쓴다.
+  const selectedSeats: SelectedSeat[] = [...selectedSeatIds].flatMap((id) => {
+    const seat = seatByGameSeatId.get(id)
+    if (!seat) return []
+    return [{
+      gameSeatId: id,
+      sectionName: seat.sectionName,
+      rowNo: seat.rowNo,
+      seatNo: seat.seatNo,
+      price: priceByGameSeatId.get(id) ?? 0,
+    }]
+  })
 
   const zoneInfos = (availabilityQuery.data ?? []).map((section) => ({
     sectionId: section.sectionId,
@@ -235,24 +250,14 @@ export function BookingSeatMapPage() {
       {activeMutationError && <ErrorBanner error={activeMutationError as ApiError} />}
 
       {!reservation && (
-        <div className="animate-slide-up fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white/95 shadow-[0_-8px_24px_-12px_rgba(15,23,42,0.18)] backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
-          <div className="flex w-full items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-10">
-            <p className="text-sm">
-              선택한 좌석 <strong className="tabular">{selectedSeatIds.size}</strong> / {MAX_SEATS}
-              {selectedSeatIds.size > 0 && (
-                <span className="tabular ml-2 text-slate-500">{estimatedTotal.toLocaleString()}원</span>
-              )}
-            </p>
-            <button
-              type="button"
-              disabled={selectedSeatIds.size === 0 || reserveMutation.isPending}
-              onClick={() => reserveMutation.mutate()}
-              className="press rounded-full bg-blue-600 px-6 py-3 text-sm font-bold text-white shadow-sm shadow-blue-600/30 transition-colors hover:bg-blue-700 disabled:opacity-40 disabled:shadow-none"
-            >
-              {reserveMutation.isPending ? '예매하는 중...' : '이 좌석으로 예매하기'}
-            </button>
-          </div>
-        </div>
+        <SelectedSeatsBar
+          seats={selectedSeats}
+          max={MAX_SEATS}
+          total={estimatedTotal}
+          reserving={reserveMutation.isPending}
+          onRemove={toggleSeat}
+          onReserve={() => reserveMutation.mutate()}
+        />
       )}
 
       {reservation && (
