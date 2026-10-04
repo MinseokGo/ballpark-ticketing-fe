@@ -6,4 +6,12 @@
 
 body {
   margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Pretendard Variable", Pretendard,
+    "Apple SD Gothic Neo", "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 숫자가 많은 화면(가격, 좌석 번호)에서 글자가 흔들리지 않게 고정폭으로 맞춘다. */
+.tabular {
+  font-variant-numeric: tabular-nums;
 }

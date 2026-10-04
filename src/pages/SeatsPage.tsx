@@ -25,14 +25,14 @@ export function SeatsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold">좌석 일괄 등록</h1>
-        <p className="mt-1 text-neutral-600 dark:text-neutral-400">
+        <h1 className="text-2xl font-extrabold tracking-tight">좌석 일괄 등록</h1>
+        <p className="mt-1 text-slate-600 dark:text-slate-400">
           POST /api/admin/sections/&#123;sectionId&#125;/seats
         </p>
       </div>
 
       <form
-        className="space-y-4 rounded-lg border border-neutral-200 p-4 dark:border-neutral-800"
+        className="space-y-4 rounded-2xl border border-slate-200 p-4 dark:border-slate-800"
         onSubmit={(event) => {
           event.preventDefault()
           mutation.mutate()
@@ -49,7 +49,7 @@ export function SeatsPage() {
               value={sectionId}
               onChange={(event) => setSectionId(event.target.value)}
               placeholder="1"
-              className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900"
+              className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-900"
             />
             <datalist id="known-sections">
               {sections.map((section) => (
@@ -68,7 +68,7 @@ export function SeatsPage() {
               max={1000}
               value={rowCount}
               onChange={(event) => setRowCount(event.target.value)}
-              className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900"
+              className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-900"
             />
           </label>
           <label className="block text-sm">
@@ -80,12 +80,12 @@ export function SeatsPage() {
               max={1000}
               value={seatsPerRow}
               onChange={(event) => setSeatsPerRow(event.target.value)}
-              className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900"
+              className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-900"
             />
           </label>
         </div>
         {sections.length === 0 && (
-          <p className="text-xs text-neutral-500">
+          <p className="text-xs text-slate-500">
             아직 이 브라우저에서 등록한 구역이 없다. 구역 등록 화면에서 먼저 만들거나, 이미 아는
             구역 ID를 직접 입력한다.
           </p>
@@ -93,7 +93,7 @@ export function SeatsPage() {
         <button
           type="submit"
           disabled={mutation.isPending}
-          className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-neutral-900"
+          className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
         >
           {mutation.isPending ? '등록 중...' : '좌석 일괄 등록'}
         </button>
