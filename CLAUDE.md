@@ -44,12 +44,12 @@ npm run lint      # oxlint
   좌석맵), 예매·Mock 결제·취소까지 다 있다(백엔드 1~4단계).
 - `/admin`, `/admin/sections`, `/admin/seats`, `/admin/games`(관리자 등록 화면)는 여전히 목록 조회를
   안 쓴다 — "이 브라우저에서 등록한 것" 표는 `localStorage` 메모일 뿐이다(`src/hooks/useLocalRegistry.ts`).
-  경기 일정은 보통 `scripts/seed-demo-data.sh`로 한 번에 만들고, 이 화면들은 추가·수정이 필요할 때만
+  경기 일정은 보통 백엔드 `seed` 프로필로 한 번에 만들고, 이 화면들은 추가·수정이 필요할 때만
   쓰는 보조 도구라 메인 내비게이션에는 "관리자" 링크 하나로만 둔다.
 - `/booking`, `/booking/:gameId`(예매 화면)는 처음부터 실제 조회 API(경기 목록, 좌석맵, 구역별 잔여석)로
   서버 데이터를 그대로 보여주고, 예매·결제·취소도 실제 API를 호출한다. `localStorage`에 남기는 건 데모용
   사용자 ID(`src/hooks/useUserId.ts`) 하나뿐이다.
-- 백엔드 5단계(시딩)가 아직이라 로컬 개발용 데이터는 `scripts/seed-demo-data.sh`로 직접 만든다. 백엔드
+- 로컬 개발용 데이터는 백엔드 `seed` 프로필(`DemoDataSeeder`)이 만든다. 백엔드
   `CLAUDE.md` "테스트" 절의 예외에 따라, 이 데모 데이터는 구단 이름을 실제 KBO 10개 구단으로 쓴다(일정은
   임의 값, 실제 KBO API 연동은 하지 않는다).
 
@@ -66,8 +66,7 @@ src
 └── constants.ts
 ```
 
-`scripts/seed-demo-data.sh`는 로컬 백엔드 관리자 API를 호출해 데모용 구역·좌석·경기를 만든다. 코드가
-아니라 개발 편의용 도구다.
+(프론트 쪽 시드 스크립트는 백엔드 시더로 대체되어 삭제했다.)
 
 새 화면을 추가할 때는 `api/`에 타입과 호출 함수를 먼저 추가하고, `pages/`에 화면을, `App.tsx`에 라우트를
 추가하는 순서로 한다.

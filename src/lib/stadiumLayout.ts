@@ -37,10 +37,17 @@ export function familySide(family: Family): 'left' | 'right' | 'center' {
   return 'center'
 }
 
-export function parseSectionName(name: string): { family: Family; tier: Tier } | null {
-  const match = /^(중앙석|1루 필드석|1루 외야석|3루 필드석|3루 외야석)\s*([ABC])$/.exec(name.trim())
+/**
+ * "중앙석 A", "중앙석 A-1"(앞 블록), "중앙석 A-2"(뒤 블록)를 받는다. 블록 번호가 없으면 구역 전체다.
+ */
+export function parseSectionName(name: string): { family: Family; tier: Tier; half: 1 | 2 | null } | null {
+  const match = /^(중앙석|1루 필드석|1루 외야석|3루 필드석|3루 외야석)\s*([ABC])(?:-([12]))?$/.exec(name.trim())
   if (!match) {
     return null
   }
-  return { family: match[1] as Family, tier: match[2] as Tier }
+  return {
+    family: match[1] as Family,
+    tier: match[2] as Tier,
+    half: match[3] ? (Number(match[3]) as 1 | 2) : null,
+  }
 }
