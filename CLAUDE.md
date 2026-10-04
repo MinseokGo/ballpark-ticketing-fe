@@ -40,24 +40,31 @@ npm run lint      # oxlint
 이 레포는 백엔드가 그 시점에 제공하는 API만 호출한다. 작업 전에 백엔드 `CLAUDE.md`의 "진행 상황" 표와 열린
 이슈를 확인해서, 아직 없는 API를 가정하고 화면을 만들지 않는다.
 
-- 2026-10-04 기준 백엔드는 관리자 등록(`POST`) API만 있다 — 구역 등록, 좌석 일괄 등록, 경기 등록. 조회
-  (`GET`) API는 없다(백엔드 3단계 "조회 API"에서 추가될 예정).
-- 그래서 지금 화면은 "등록하면 결과를 그 자리에서 보여주는" 수준이다. 목록처럼 보이는 것(구역·경기 표)은
-  `localStorage`에 이 브라우저가 기록해 둔 메모일 뿐이고(`src/hooks/useLocalRegistry.ts`), 서버의 실제
-  데이터가 아니다.
-- 백엔드에 조회 API가 생기면 해당 화면은 `localStorage` 메모를 걷어내고 TanStack Query로 실제 서버 데이터를
-  가져오도록 바꾼다.
+- 2026-10-04 기준 백엔드는 관리자 등록(구역·좌석·경기, 예매 오픈), 조회(경기 목록/상세, 구역별 잔여석,
+  좌석맵), 예매·Mock 결제·취소까지 다 있다(백엔드 1~4단계).
+- `/sections`, `/seats`, `/games`(관리자 등록 화면)는 여전히 목록 조회를 안 쓴다 — "이 브라우저에서
+  등록한 것" 표는 `localStorage` 메모일 뿐이다(`src/hooks/useLocalRegistry.ts`). 이 화면들이 구역·경기
+  목록을 실제로 조회하게 바꿀지는 아직 정하지 않았다.
+- `/booking`, `/booking/:gameId`(예매 화면)는 처음부터 실제 조회 API(경기 목록, 좌석맵, 구역별 잔여석)로
+  서버 데이터를 그대로 보여주고, 예매·결제·취소도 실제 API를 호출한다. `localStorage`에 남기는 건 데모용
+  사용자 ID(`src/hooks/useUserId.ts`) 하나뿐이다.
+- 백엔드 5단계(시딩)가 아직이라 로컬 개발용 데이터는 `scripts/seed-demo-data.sh`로 직접 만든다. 백엔드
+  `CLAUDE.md` "테스트" 절의 예외에 따라, 이 데모 데이터는 구단 이름을 실제 KBO 10개 구단으로 쓴다(일정은
+  임의 값, 실제 KBO API 연동은 하지 않는다).
 
 ## 패키지 구조
 
 ```
 src
-├── api          client.ts(fetch 래퍼, ProblemDetail 에러), admin.ts(엔드포인트별 함수), types.ts(요청/응답 타입)
-├── components   여러 화면이 같이 쓰는 것 (Layout, Banner, SeatGridPreview)
-├── hooks        useLocalRegistry 등
-├── pages        화면 단위 (DashboardPage, SectionsPage, SeatsPage, GamesPage)
+├── api          client.ts(fetch 래퍼, ProblemDetail 에러), admin.ts/booking.ts(엔드포인트별 함수), types.ts(요청/응답 타입)
+├── components   여러 화면이 같이 쓰는 것 (Layout, Banner, SeatGridPreview, SeatMapGrid)
+├── hooks        useLocalRegistry, useUserId 등
+├── pages        화면 단위 (DashboardPage, Sections/Seats/GamesPage, BookingGamesPage, BookingSeatMapPage)
 └── constants.ts
 ```
+
+`scripts/seed-demo-data.sh`는 로컬 백엔드 관리자 API를 호출해 데모용 구역·좌석·경기를 만든다. 코드가
+아니라 개발 편의용 도구다.
 
 새 화면을 추가할 때는 `api/`에 타입과 호출 함수를 먼저 추가하고, `pages/`에 화면을, `App.tsx`에 라우트를
 추가하는 순서로 한다.
@@ -99,7 +106,7 @@ Library를 추가한다. 지금은 `npm run build`(타입 체크)와 `npm run li
 | 구분 | 값 |
 |---|---|
 | 타입 | `타입: 기능`, `타입: 버그`, `타입: 리팩터링`, `타입: 설계`, `타입: 설정`, `타입: 문서`, `타입: 테스트` |
-| 화면 | `화면: 구역`, `화면: 좌석`, `화면: 경기`, `화면: 공통` |
+| 화면 | `화면: 구역`, `화면: 좌석`, `화면: 경기`, `화면: 예매`, `화면: 공통` |
 | 우선순위 | `우선순위: 높음`, `우선순위: 보통`, `우선순위: 낮음` |
 | 버전 | `버전: v1`, `버전: v2` |
 
@@ -112,6 +119,7 @@ Library를 추가한다. 지금은 `npm run build`(타입 체크)와 `npm run li
 |---|---|---|
 | 0 | 프로젝트 뼈대 (Vite + React + TS + Tailwind + Router + Query) | 완료 |
 | 1 | 관리자 콘솔: 구역 등록, 좌석 일괄 등록(격자 미리보기), 경기 등록 | 완료 |
-| 2 | 백엔드 3단계(조회 API) 대응: 구역·경기 목록, 좌석맵 화면으로 교체 | 백엔드 3단계 이후 |
+| 2 | 사용자 예매 화면: 경기 목록, 좌석맵 선택, 예매/Mock 결제/취소 | 완료 |
 
-열린 과제: 백엔드 3단계가 끝나면 `localStorage` 메모(`useLocalRegistry`)를 실제 조회 API 호출로 교체한다.
+열린 과제: 관리자 콘솔(`/sections`, `/seats`, `/games`)의 `localStorage` 메모를 실제 조회 API로 교체할지
+결정한다. 지금은 예매 화면만 실제 조회를 쓴다.
