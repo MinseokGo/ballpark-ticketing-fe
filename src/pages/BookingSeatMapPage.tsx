@@ -11,11 +11,10 @@ import {
 } from '../api/booking'
 import { ApiError } from '../api/client'
 import { ErrorBanner, SuccessBanner } from '../components/Banner'
-import { SeatArcGrid } from '../components/SeatArcGrid'
 import { StadiumMap } from '../components/StadiumMap'
 import { useBookingHistory } from '../hooks/useBookingHistory'
 import { useUserId } from '../hooks/useUserId'
-import { STADIUM_PALETTE } from '../lib/stadiumPalette'
+import { FAMILY_COLOR, parseSectionName } from '../lib/stadiumLayout'
 import { teamColor } from '../lib/teamColors'
 import type { ReservationResponse, SeatMapItemResponse } from '../api/types'
 
@@ -36,7 +35,6 @@ export function BookingSeatMapPage() {
   const { upsert: upsertHistory } = useBookingHistory()
   const [selectedSeatIds, setSelectedSeatIds] = useState<Set<number>>(new Set())
   const [reservation, setReservation] = useState<ReservationResponse | null>(null)
-  const [selectedSectionId, setSelectedSectionId] = useState<number | null>(null)
 
   const gameQuery = useQuery({ queryKey: ['game', gameId], queryFn: () => getGame(gameId) })
   const seatMapQuery = useQuery({ queryKey: ['seatMap', gameId], queryFn: () => getSeatMap(gameId) })
@@ -120,17 +118,34 @@ export function BookingSeatMapPage() {
     group.items.push(item)
   }
 
-  const stadiumSections = (availabilityQuery.data ?? []).map((section) => ({
+  const stadiumSections = sections.map((section) => ({
     sectionId: section.sectionId,
-    name: section.name,
-    availableSeats: section.availableSeats,
-    totalSeats: section.totalSeats,
+    name: section.sectionName,
+    items: section.items,
   }))
 
-  const effectiveSectionId = selectedSectionId ?? sections[0]?.sectionId ?? null
-  const selectedSection = sections.find((section) => section.sectionId === effectiveSectionId) ?? null
-  const selectedAvailability =
-    availabilityQuery.data?.find((section) => section.sectionId === effectiveSectionId) ?? null
+  const priceBySectionId = new Map((availabilityQuery.data ?? []).map((section) => [section.sectionId, section.price]))
+  const priceByGameSeatId = new Map<number, number>()
+  for (const section of sections) {
+    const price = priceBySectionId.get(section.sectionId) ?? 0
+    for (const item of section.items) {
+      priceByGameSeatId.set(item.gameSeatId, price)
+    }
+  }
+  const estimatedTotal = [...selectedSeatIds].reduce((sum, id) => sum + (priceByGameSeatId.get(id) ?? 0), 0)
+
+  // 구역 이름 체계(중앙석/필드석/외야석)별 가격대를 보여주는 범례. 색은 StadiumMap과 같은 기준(FAMILY_COLOR)을 쓴다.
+  const familyPriceRanges = new Map<string, { color: string; min: number; max: number }>()
+  for (const section of availabilityQuery.data ?? []) {
+    const info = parseSectionName(section.name)
+    if (!info) continue
+    const existing = familyPriceRanges.get(info.family)
+    familyPriceRanges.set(info.family, {
+      color: FAMILY_COLOR[info.family],
+      min: Math.min(existing?.min ?? section.price, section.price),
+      max: Math.max(existing?.max ?? section.price, section.price),
+    })
+  }
 
   const activeMutationError = reserveMutation.error ?? payMutation.error ?? cancelMutation.error
   const game = gameQuery.data
@@ -191,31 +206,17 @@ export function BookingSeatMapPage() {
 
       {stadiumSections.length > 0 && (
         <div className="rounded-3xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
-          <p className="mb-3 text-center text-sm text-slate-500">구역을 탭해서 좌석을 골라보세요</p>
-          <StadiumMap
-            sections={stadiumSections}
-            selectedSectionId={effectiveSectionId}
-            onSelect={setSelectedSectionId}
-          />
-          <div className="mt-4 flex flex-wrap justify-center gap-2">
-            {availabilityQuery.data?.map((section, index) => (
-              <button
-                key={section.sectionId}
-                type="button"
-                onClick={() => setSelectedSectionId(section.sectionId)}
-                className={[
-                  'flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
-                  section.sectionId === effectiveSectionId
-                    ? 'border-blue-300 bg-blue-50 dark:border-blue-700 dark:bg-blue-950'
-                    : 'border-slate-200 dark:border-slate-700',
-                ].join(' ')}
-              >
-                <span
-                  className="size-2 rounded-full"
-                  style={{ backgroundColor: STADIUM_PALETTE[index % STADIUM_PALETTE.length] }}
-                />
-                {section.name} · {section.price.toLocaleString()}원
-              </button>
+          <p className="mb-3 text-center text-sm text-slate-500">
+            실제 자리 배치 그대로예요. 좌석을 탭해서 바로 골라보세요
+          </p>
+          <StadiumMap sections={stadiumSections} selectedIds={selectedSeatIds} onToggle={toggleSeat} />
+          <div className="mt-4 flex flex-wrap justify-center gap-3">
+            {[...familyPriceRanges.entries()].map(([family, info]) => (
+              <span key={family} className="flex items-center gap-1.5 text-xs text-slate-500">
+                <span className="size-2.5 rounded-full" style={{ backgroundColor: info.color }} />
+                {family} {info.min.toLocaleString()}
+                {info.min !== info.max ? `~${info.max.toLocaleString()}` : ''}원
+              </span>
             ))}
           </div>
         </div>
@@ -223,40 +224,14 @@ export function BookingSeatMapPage() {
 
       {seatMapQuery.isPending && <p className="text-sm text-slate-500">좌석맵을 불러오는 중...</p>}
 
-      {selectedSection && (
-        <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
-          <div className="mb-3 flex items-baseline justify-between">
-            <h2 className="font-semibold">{selectedSection.sectionName}</h2>
-            {selectedAvailability && (
-              <p className="tabular text-sm text-slate-500">
-                {selectedAvailability.availableSeats} / {selectedAvailability.totalSeats}석 남음
-              </p>
-            )}
-          </div>
-          <div className="overflow-x-auto">
-            <SeatArcGrid
-              items={selectedSection.items}
-              sectionName={selectedSection.sectionName}
-              selectedIds={selectedSeatIds}
-              onToggle={toggleSeat}
-            />
-          </div>
-        </div>
-      )}
-
       <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
         <span className="flex items-center gap-1">
-          <span className="inline-block size-3 rounded-full border border-sky-300 bg-sky-100" /> 선택 가능
+          <span className="inline-block size-3 rounded-full border border-slate-300 bg-slate-300" /> 선점·판매됨
         </span>
         <span className="flex items-center gap-1">
           <span className="inline-block size-3 rounded-full border border-emerald-600 bg-emerald-500" /> 선택함
         </span>
-        <span className="flex items-center gap-1">
-          <span className="inline-block size-3 rounded-full border border-amber-300 bg-amber-100" /> 선점됨
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="inline-block size-3 rounded-full border border-slate-300 bg-slate-200" /> 판매 완료
-        </span>
+        <span>· 색이 있는 조각은 그 구역의 예매 가능한 좌석이에요</span>
       </div>
 
       {activeMutationError && <ErrorBanner error={activeMutationError as ApiError} />}
@@ -266,6 +241,9 @@ export function BookingSeatMapPage() {
           <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-4 py-4">
             <p className="text-sm">
               선택한 좌석 <strong className="tabular">{selectedSeatIds.size}</strong> / {MAX_SEATS}
+              {selectedSeatIds.size > 0 && (
+                <span className="tabular ml-2 text-slate-500">{estimatedTotal.toLocaleString()}원</span>
+              )}
             </p>
             <button
               type="button"

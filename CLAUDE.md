@@ -58,7 +58,7 @@ npm run lint      # oxlint
 ```
 src
 ├── api          client.ts(fetch 래퍼, ProblemDetail 에러), admin.ts/booking.ts(엔드포인트별 함수), types.ts(요청/응답 타입)
-├── components   여러 화면이 같이 쓰는 것 (Layout, Banner, GameCard, SeatGridPreview, StadiumMap, SeatArcGrid)
+├── components   여러 화면이 같이 쓰는 것 (Layout, Banner, GameCard, SeatGridPreview, StadiumMap)
 ├── hooks        useLocalRegistry, useUserId, useBookingHistory
 ├── lib          teamColors.ts(팀 이름 → 강조색, 장식용), stadiumLayout.ts(구역 이름 → 돔 배치) 등 순수 유틸
 ├── pages        화면 단위 (HomePage, BookingGamesPage, BookingSeatMapPage, ProfilePage,
@@ -101,24 +101,24 @@ src
   흔들리지 않게 한다.
 - 팀 강조색: `src/lib/teamColors.ts`의 `teamColor(teamName)`을 쓴다. 실제 구단 로고가 아니라 카드를
   구분하기 쉽게 하는 장식용 배색이라는 걸 명확히 한다(주석·커밋 메시지에 "장식용"이라고 적어 둔다).
-- 좌석 선택 화면의 구역 고르기는 `src/components/StadiumMap.tsx`로 경기장을 위에서 내려다본 돔 모양을
-  그린다. 원이 아니라 위아래(홈플레이트~외야 방향)로 더 긴 타원이다(`VERTICAL_SCALE`) — 실제 구장 돔에
-  더 가깝다. 타원 호를 그릴 때는 SVG arc의 `rx`/`ry`를 `outerR`/`outerR * VERTICAL_SCALE`로 각각 따로
+- 좌석 선택은 `src/components/StadiumMap.tsx` 하나로 끝난다. 경기장을 위에서 내려다본 돔 모양(원이
+  아니라 홈플레이트~외야 방향으로 더 긴 타원, `VERTICAL_SCALE`)을 그리고, **구역을 통짜 조각으로 보여준
+  뒤 따로 좌석 선택 화면으로 넘어가지 않는다** — 구역 하나를 그 구역의 실제 좌석 수(행x열)만큼 쪼개서,
+  각 좌석을 그 자리 그대로 그린다. 줄(행)은 동심원으로, 좌석(열)은 그 안에서 각도로 나눈다. 예매 가능한
+  (AVAILABLE) 좌석은 그 구역 색으로 칠하고, 선점·판매된 좌석은 흐리게 칠해 구분한다. 사용자는 지도 위의
+  좌석 조각을 바로 탭해서 고른다 — 별도 "구역 선택 → 좌석 선택" 2단계가 아니라 지도 자체가 좌석 선택
+  화면이다. 타원 호를 그릴 때는 SVG arc의 `rx`/`ry`를 `outerR`/`outerR * VERTICAL_SCALE`로 각각 따로
   줘야 좌표가 어긋나지 않는다(원 전용 `rx=ry=outerR`를 그대로 쓰면 호가 비틀어진다). 평평한 조각처럼
-  보이지 않게, 필드 쪽에서 빛이 퍼지는 듯한 은은한 radial gradient(`#stadium-shine`)를 전체 위에
-  겹친다.
+  보이지 않게, 필드 쪽에서 빛이 퍼지는 듯한 은은한 radial gradient(`#stadium-shine`)를 전체 위에 겹친다.
   구역 이름이 "중앙석 A" 같은 5개 구역(중앙석 / 1루·3루 필드석 / 1루·3루 외야석) x A~C 체계를 따르면
-  (`scripts/seed-demo-data.sh`가 만드는 15개 구역이 정확히 이 체계다), 실제 자리처럼 배치한다 — 중앙석·
-  필드석(파울 구역)은 홈플레이트 뒤 270도에, 외야석(페어 구역)은 외야 벽 너머 90도에 두고, A~C는 안쪽
-  부터 바깥쪽 동심원(바깥쪽일수록 싸고 멀다)으로 그린다. 필드(그린 + 다이아몬드)는 그 중간의 빈 공간을
-  채운다. 이 이름 체계를 공유하는 판정 로직(`parseSectionName`, `FAMILY_ANGLES` 등)은
-  `src/lib/stadiumLayout.ts`에 모아서 지도와 좌석 확대 화면이 같은 배치를 쓴다. 이름이 체계를 벗어나는
-  데이터가 섞이면(예: 옛 시드 데이터) 원 둘레에 균등하게 나눠 그리는 방식으로 자동으로 되돌아간다.
-- 구역을 탭하면 그 아래에 `src/components/SeatArcGrid.tsx`가 실제 좌석을 보여준다 — 평평한 격자가
-  아니라 줄(열)마다 호로 둥글게 그려서, 가까운 열은 안쪽에 둥글게, 뒷열일수록 바깥쪽으로 퍼진다(지도에서
-  그 구역을 봤을 때와 같은 방향이 되도록 1루/3루 쪽은 좌우를 뒤집는다). 열 번호를 줄 왼쪽에 "N열"로
-  적어 두고 좌석마다 좌석 번호를 보여줘서 "어디가 몇 번인지" 바로 알 수 있게 한다. 지도에서 구역 선택 →
-  좌석 선택, 2단계 흐름.
+  (`scripts/seed-demo-data.sh`가 만드는 15개 구역이 정확히 이 체계다), 중앙석·필드석(파울 구역)은
+  홈플레이트 뒤 270도에, 외야석(페어 구역)은 외야 벽 너머 90도에 두고, A~C는 안쪽부터 바깥쪽 동심원
+  (바깥쪽일수록 싸고 멀다)으로 그 구역 전체를 배치한 다음 그 안에서 실제 좌석으로 또 쪼갠다. 필드
+  (그린 + 다이아몬드)는 그 중간의 빈 공간을 채운다. 이 이름 체계를 공유하는 판정 로직
+  (`parseSectionName`, `FAMILY_ANGLES` 등)은 `src/lib/stadiumLayout.ts`에 모아 둔다. 이름이 체계를
+  벗어나는 데이터가 섞이면(예: 옛 시드 데이터) 좌석 단위로 못 쪼개니 구역을 통짜 조각으로 보여주는
+  방식으로 되돌아간다(`FallbackWedge`). 좌석이 많아 탭 영역이 작으니 각 좌석에 `<title>`(행/열/상태)을
+  달아 뒀고, 구역별 가격대는 지도 아래 범례(색 + 가격)로 보여준다.
 - 내비게이션: 상단 `Layout`의 메인 탭은 홈(`/`)·예매(`/booking`)·마이페이지(`/profile`) 3개만 둔다.
   관리자 도구는 눈에 덜 띄는 보조 링크(`/admin`) 하나로 묶는다 — 일반 사용자가 쓸 화면이 아니다.
 - 모바일 폭(390px 기준)에서 먼저 보고 깨지지 않는지 확인한다. 화면 하단에 고정되는 액션 바(예매 화면의

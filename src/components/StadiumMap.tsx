@@ -6,6 +6,7 @@ import {
   parseSectionName,
 } from '../lib/stadiumLayout'
 import { STADIUM_PALETTE } from '../lib/stadiumPalette'
+import type { SeatMapItemResponse } from '../api/types'
 
 // 원이 아니라 위아래로 긴 타원으로 그린다 — 홈플레이트~외야 방향이 더 길어 실제 구장 돔에 가깝다.
 const SIZE_X = 320
@@ -18,6 +19,9 @@ const VERTICAL_SCALE = 1.3
 const INFIELD_R = 40
 const WALL_R = 72
 const OUTER_R = 130
+
+const SOLD_FILL = '#CBD5E1'
+const SELECTED_FILL = '#10B981'
 
 function polarToCartesian(r: number, angleDeg: number) {
   const rad = (angleDeg * Math.PI) / 180
@@ -39,7 +43,7 @@ function sectorPath(startAngle: number, endAngle: number, innerR: number, outerR
   ].join(' ')
 }
 
-export type StadiumSectionInput = { sectionId: number; name: string; availableSeats: number; totalSeats: number }
+export type StadiumSectionSeats = { sectionId: number; name: string; items: SeatMapItemResponse[] }
 
 function Field() {
   return (
@@ -60,76 +64,123 @@ function Field() {
   )
 }
 
-function Wedge({
+/** 한 구역(예: "1루 외야석 B")의 좌석을 실제 자리 수만큼 쪼개서, 줄은 동심원으로, 좌석은 그 안에서 각도로 나눠 그린다. */
+function SeatCells({
   section,
-  startAngle,
-  endAngle,
+  familyStart,
+  familyEnd,
   innerR,
   outerR,
   color,
-  label,
-  selected,
-  onSelect,
+  selectedIds,
+  onToggle,
 }: {
-  section: StadiumSectionInput
-  startAngle: number
-  endAngle: number
+  section: StadiumSectionSeats
+  familyStart: number
+  familyEnd: number
   innerR: number
   outerR: number
   color: string
-  label: string
-  selected: boolean
-  onSelect: (sectionId: number) => void
+  selectedIds: Set<number>
+  onToggle: (gameSeatId: number) => void
 }) {
-  const midAngle = (startAngle + endAngle) / 2
-  const labelPos = polarToCartesian(innerR + (outerR - innerR) / 2, midAngle)
-  const ratio = section.totalSeats === 0 ? 0 : section.availableSeats / section.totalSeats
-  const soldOut = section.availableSeats === 0
+  const rows = new Map<number, SeatMapItemResponse[]>()
+  for (const item of section.items) {
+    const list = rows.get(item.rowNo) ?? []
+    list.push(item)
+    rows.set(item.rowNo, list)
+  }
+  const rowNumbers = [...rows.keys()].sort((a, b) => a - b)
+  const rowCount = Math.max(rowNumbers.length, 1)
+  const rowThickness = (outerR - innerR) / rowCount
 
   return (
-    <g onClick={() => onSelect(section.sectionId)} className="cursor-pointer">
-      <path
-        d={sectorPath(startAngle, endAngle, innerR, outerR)}
-        fill={color}
-        fillOpacity={soldOut ? 0.12 : selected ? 0.6 + ratio * 0.4 : 0.25 + ratio * 0.45}
-        strokeWidth={selected ? 2.5 : 1}
-        className={selected ? 'stroke-white dark:stroke-slate-950' : 'stroke-slate-50 dark:stroke-slate-900'}
-      />
-      <text
-        x={labelPos.x}
-        y={labelPos.y}
-        textAnchor="middle"
-        dominantBaseline="middle"
-        className="pointer-events-none select-none text-[10px] font-bold"
-        fill={soldOut ? '#94A3B8' : '#fff'}
-      >
-        {label}
-      </text>
-    </g>
+    <>
+      {rowNumbers.map((rowNo, rowIndex) => {
+        const rowItems = [...rows.get(rowNo)!].sort((a, b) => a.seatNo - b.seatNo)
+        const seatCount = Math.max(rowItems.length, 1)
+        const angleStep = (familyEnd - familyStart) / seatCount
+        const rInner = innerR + rowIndex * rowThickness
+        const rOuter = innerR + (rowIndex + 1) * rowThickness
+
+        return rowItems.map((item, seatIndex) => {
+          const aStart = familyStart + seatIndex * angleStep
+          const aEnd = aStart + angleStep
+          const selected = selectedIds.has(item.gameSeatId)
+          const clickable = item.status === 'AVAILABLE'
+          const fill = selected ? SELECTED_FILL : item.status === 'AVAILABLE' ? color : SOLD_FILL
+          const fillOpacity = selected ? 1 : item.status === 'AVAILABLE' ? 0.85 : item.status === 'HELD' ? 0.45 : 0.3
+
+          return (
+            <path
+              key={item.gameSeatId}
+              d={sectorPath(aStart, aEnd, rInner, rOuter)}
+              fill={fill}
+              fillOpacity={fillOpacity}
+              strokeWidth={0.75}
+              className={[
+                'stroke-slate-50 transition-[fill-opacity] dark:stroke-slate-900',
+                clickable || selected ? 'cursor-pointer' : 'cursor-not-allowed',
+              ].join(' ')}
+              onClick={() => onToggle(item.gameSeatId)}
+            >
+              <title>
+                {section.name} {item.rowNo}열 {item.seatNo}번 · {item.status}
+              </title>
+            </path>
+          )
+        })
+      })}
+    </>
+  )
+}
+
+/** 이름 체계를 모르는 구역(옛 시드 데이터 등)은 좌석 단위로 못 쪼개니 구역 하나를 통짜 조각으로 보여준다. */
+function FallbackWedge({
+  section,
+  startAngle,
+  endAngle,
+  color,
+}: {
+  section: StadiumSectionSeats
+  startAngle: number
+  endAngle: number
+  color: string
+}) {
+  const available = section.items.filter((item) => item.status === 'AVAILABLE').length
+  const ratio = section.items.length === 0 ? 0 : available / section.items.length
+  return (
+    <path
+      d={sectorPath(startAngle, endAngle, INFIELD_R, OUTER_R)}
+      fill={color}
+      fillOpacity={0.25 + ratio * 0.5}
+      strokeWidth={1}
+      className="stroke-slate-50 dark:stroke-slate-900"
+    />
   )
 }
 
 /**
- * 경기장을 위에서 내려다본 돔 모양으로 구역을 보여준다. 구역 이름이 "중앙석 A" 같은 5개 구역
- * (중앙석 / 1루·3루 필드석 / 1루·3루 외야석) x A~C 체계를 따르면, 실제 자리처럼 중앙석·필드석은
- * 홈 플레이트 뒤 파울 구역에, 외야석은 외야 벽 너머 페어 구역에 배치하고 A~C는 안쪽부터 바깥쪽
- * 동심원으로 그린다. 이 이름 체계를 따르지 않는 데이터가 섞여 있으면 원 둘레에 균등하게 나눠
- * 그리는 방식으로 되돌아간다(아직 예전 시드 데이터일 때 깨지지 않도록).
+ * 경기장을 위에서 내려다본 돔 모양으로 "구역"이 아니라 좌석 하나하나를 보여준다. 구역 이름이
+ * "중앙석 A" 같은 5개 구역(중앙석 / 1루·3루 필드석 / 1루·3루 외야석) x A~C 체계를 따르면, 그 구역의
+ * 실제 자리(행x열)만큼 쪼개서 각자 자리에 그린다 — 예매 가능(AVAILABLE)한 자리는 그 구역 색으로,
+ * 선점·판매된 자리는 흐리게. 탭하면 바로 그 좌석이 선택된다(별도 좌석 선택 화면 없음). 이름 체계를
+ * 벗어나는 데이터가 섞이면 구역을 통짜 조각으로 보여주는 방식으로 되돌아간다.
  */
 export function StadiumMap({
   sections,
-  selectedSectionId,
-  onSelect,
+  selectedIds,
+  onToggle,
 }: {
-  sections: StadiumSectionInput[]
-  selectedSectionId: number | null
-  onSelect: (sectionId: number) => void
+  sections: StadiumSectionSeats[]
+  selectedIds: Set<number>
+  onToggle: (gameSeatId: number) => void
 }) {
   const parsed = sections.map((section) => ({ section, parsed: parseSectionName(section.name) }))
   const allRecognized = parsed.length > 0 && parsed.every((item) => item.parsed !== null)
 
   return (
-    <svg viewBox={`0 0 ${SIZE_X} ${SIZE_Y}`} className="mx-auto w-full max-w-xs">
+    <svg viewBox={`0 0 ${SIZE_X} ${SIZE_Y}`} className="mx-auto w-full max-w-sm">
       <defs>
         {/* 필드 쪽에서 빛이 퍼지는 느낌을 주는 은은한 하이라이트 — 평평한 조각보다 자연스럽게 보이게 한다. */}
         <radialGradient id="stadium-shine" cx="50%" cy="50%" r="60%">
@@ -147,34 +198,28 @@ export function StadiumMap({
             const tierIndex = TIER_ORDER.indexOf(tier)
             const ringWidth = (OUTER_R - innerBound) / TIER_ORDER.length
             return (
-              <Wedge
+              <SeatCells
                 key={section.sectionId}
                 section={section}
-                startAngle={familyStart}
-                endAngle={familyEnd}
+                familyStart={familyStart}
+                familyEnd={familyEnd}
                 innerR={innerBound + tierIndex * ringWidth}
                 outerR={innerBound + (tierIndex + 1) * ringWidth}
                 color={FAMILY_COLOR[family]}
-                label={tier}
-                selected={section.sectionId === selectedSectionId}
-                onSelect={onSelect}
+                selectedIds={selectedIds}
+                onToggle={onToggle}
               />
             )
           })
         : sections.map((section, index) => {
             const sliceAngle = 360 / sections.length
             return (
-              <Wedge
+              <FallbackWedge
                 key={section.sectionId}
                 section={section}
                 startAngle={index * sliceAngle}
                 endAngle={(index + 1) * sliceAngle}
-                innerR={INFIELD_R}
-                outerR={OUTER_R}
                 color={STADIUM_PALETTE[index % STADIUM_PALETTE.length]!}
-                label={section.name.slice(0, 2)}
-                selected={section.sectionId === selectedSectionId}
-                onSelect={onSelect}
               />
             )
           })}

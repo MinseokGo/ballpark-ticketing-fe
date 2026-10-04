@@ -45,7 +45,7 @@ BASE_URL=http://localhost:8081 ./scripts/seed-demo-data.sh   # point at wherever
 |---|---|---|
 | `/` | `GET /api/games` | Home: hero + a preview of upcoming games. |
 | `/booking` | `GET /api/games` | Full game list; only `OPEN` ones link to the seat map. |
-| `/booking/:gameId` | `GET /api/games/{id}`, `.../seats`, `.../sections`, `POST .../reservations`, `POST /api/reservations/{id}/payments`, `POST /api/reservations/{id}/cancel` | Tap a section on the stadium map, pick up to 4 `AVAILABLE` seats, reserve, then mark the mock payment success/failure or cancel. Re-fetches after every action so status always reflects the server. |
+| `/booking/:gameId` | `GET /api/games/{id}`, `.../seats`, `.../sections`, `POST .../reservations`, `POST /api/reservations/{id}/payments`, `POST /api/reservations/{id}/cancel` | The stadium map (`StadiumMap`) renders every individual seat in its real position (no separate "pick a section, then pick a seat" step) — tap up to 4 `AVAILABLE` seats directly, reserve, then pay (mock) or cancel. Re-fetches after every action so status always reflects the server. |
 | `/profile` | — (local only) | Demo user id, and this browser's booking history (`useBookingHistory`). |
 | `/admin/sections` | `POST /api/admin/sections` | Section name must be unique (409 `SEAT-006` otherwise) |
 | `/admin/seats` | `POST /api/admin/sections/{sectionId}/seats` | Fills a `rowCount` x `seatsPerRow` grid; renders a preview grid (capped at 20x30) |
