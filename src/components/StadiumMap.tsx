@@ -22,8 +22,9 @@ const WALL_R = 72
 const OUTER_R = 130
 
 // 확대/축소 전 기본 화면에 돔 전체가 들어가는 논리 크기.
-const WORLD_W = 280
-const WORLD_H = 360
+// 돔 외곽(가로 260, 세로 약 338)에 맞춘 여백 최소 크기 — 화면을 꽉 채우도록 여백을 줄였다.
+const WORLD_W = 262
+const WORLD_H = 340
 
 const MIN_ZOOM = 1
 const MAX_ZOOM = 40
@@ -72,6 +73,9 @@ type SeatCell = {
 }
 
 type Band = {
+  sectionId: number
+  // 구역 경계 전체를 한 번에 강조할 때 쓰는 외곽 경로.
+  outline: Path2D
   fStart: number
   fEnd: number
   bInner: number
@@ -186,7 +190,17 @@ function buildLayout(sections: StadiumSectionSeats[]): Layout {
       })
     })
 
-    bands.push({ fStart, fEnd, bInner, bOuter, rowThickness, colStep, rows })
+    bands.push({
+      sectionId: section.sectionId,
+      outline: annularPath(bInner, bOuter, fStart, fEnd),
+      fStart,
+      fEnd,
+      bInner,
+      bOuter,
+      rowThickness,
+      colStep,
+      rows,
+    })
     const midAngle = (fStart + fEnd) / 2
     labels.push({ text: section.name, family: false, angle: midAngle, radius: (bInner + bOuter) / 2 })
     // 계열 이름표는 계열당 한 번만(B층, 앞 블록 쪽에서) 단다.
@@ -250,11 +264,23 @@ function zoomAt(view: View, w: number, h: number, px: number, py: number, nextZo
   )
 }
 
+/** 구역의 중심을 화면 가운데에 놓는 보기(줌 배율은 구역 폭에 맞춘다). */
+function zoneView(band: Band, w: number, h: number): View {
+  const rMid = (band.bInner + band.bOuter) / 2
+  const angle = ((band.fStart + band.fEnd) / 2) * (Math.PI / 180)
+  const xc = CX + rMid * Math.sin(angle)
+  const yc = CY - rMid * Math.cos(angle)
+  const zoom = clamp(60 / (band.bOuter - band.bInner), 2.2, 5)
+  const k = Math.min(w / WORLD_W, h / WORLD_H) * zoom
+  return clampView({ zoom, panX: -k * (xc - CX), panY: -k * VS * (yc - CY) }, w, h)
+}
+
 function drawStadium(
   canvas: HTMLCanvasElement,
   layout: Layout,
   selectedIds: Set<number>,
   hovered: SeatCell | null,
+  focusSectionId: number | null,
   view: View,
   w: number,
   h: number,
@@ -327,6 +353,20 @@ function drawStadium(
   ctx.lineWidth = 1
   ctx.stroke()
 
+  // 범례에서 고른 구역: 경계선과 옅은 색으로 테두리를 친다.
+  if (focusSectionId !== null) {
+    const band = layout.bands.find((b) => b.sectionId === focusSectionId)
+    if (band) {
+      ctx.globalAlpha = 1
+      ctx.fillStyle = 'rgba(37, 99, 235, 0.12)'
+      ctx.fill(band.outline)
+      ctx.strokeStyle = '#2563EB'
+      ctx.lineWidth = 1.6
+      ctx.lineJoin = 'round'
+      ctx.stroke(band.outline)
+    }
+  }
+
   if (hovered) {
     ctx.strokeStyle = '#0F172A'
     ctx.lineWidth = 0.9
@@ -391,10 +431,13 @@ export function StadiumMap({
   sections,
   selectedIds,
   onToggle,
+  focus,
 }: {
   sections: StadiumSectionSeats[]
   selectedIds: Set<number>
   onToggle: (gameSeatId: number) => void
+  // 범례에서 구역을 누를 때마다 nonce가 바뀌어서, 같은 구역을 다시 눌러도 줌이 다시 돈다.
+  focus?: { sectionId: number; nonce: number } | null
 }) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -414,12 +457,41 @@ export function StadiumMap({
 
   const layout = useMemo(() => buildLayout(sections), [sections])
 
+  const viewRef = useRef(view)
+  useEffect(() => {
+    viewRef.current = view
+  }, [view])
+
+  // 구역을 고르면 현재 화면에서 그 구역 중심으로 부드럽게 줌인한다.
+  useEffect(() => {
+    if (!focus) return
+    const band = layout.bands.find((b) => b.sectionId === focus.sectionId)
+    if (!band) return
+    const from = viewRef.current
+    const to = zoneView(band, size.w, size.h)
+    const startedAt = performance.now()
+    let frame = 0
+    const step = (now: number) => {
+      const t = Math.min(1, (now - startedAt) / 450)
+      const e = 1 - Math.pow(1 - t, 3)
+      setView({
+        zoom: from.zoom + (to.zoom - from.zoom) * e,
+        panX: from.panX + (to.panX - from.panX) * e,
+        panY: from.panY + (to.panY - from.panY) * e,
+      })
+      if (t < 1) frame = requestAnimationFrame(step)
+    }
+    frame = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(frame)
+  }, [focus, layout, size])
+
   useEffect(() => {
     const el = wrapRef.current
     if (!el) return
     const update = () => {
       const w = el.clientWidth
-      setSize({ w, h: Math.min(640, Math.max(420, Math.round(w * 0.9))) })
+      // 돔 비율(가로:세로 약 0.77)에 맞춰 세로를 잡고, 너무 커지지 않게만 제한한다.
+      setSize({ w, h: Math.min(760, Math.max(460, Math.round(w * 1.05))) })
     }
     update()
     const observer = new ResizeObserver(update)
@@ -432,10 +504,10 @@ export function StadiumMap({
     if (!canvas) return
     const dpr = window.devicePixelRatio || 1
     const id = requestAnimationFrame(() =>
-      drawStadium(canvas, layout, selectedIds, hoverCell, view, size.w, size.h, dpr),
+      drawStadium(canvas, layout, selectedIds, hoverCell, focus?.sectionId ?? null, view, size.w, size.h, dpr),
     )
     return () => cancelAnimationFrame(id)
-  }, [layout, selectedIds, hoverCell, view, size])
+  }, [layout, selectedIds, hoverCell, focus, view, size])
 
   // 휠은 기본 스크롤과 충돌하므로 passive: false로 직접 붙인다.
   useEffect(() => {

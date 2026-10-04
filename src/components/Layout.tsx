@@ -26,11 +26,13 @@ export function Layout() {
   const { pathname, key } = useLocation()
   // 좌석 지도 화면은 하단에 예매·결제 바가 떠 있어서 탭 바와 겹치지 않게 숨긴다.
   const onSeatMap = /^\/booking\/\d+/.test(pathname)
+  // 좌석 지도는 화면 폭을 넓게 써서 돔이 꽉 차 보이게 한다.
+  const width = onSeatMap ? 'max-w-5xl' : 'max-w-3xl'
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-50">
       <header className="sticky top-0 z-10 border-b border-slate-200/70 bg-slate-50/80 backdrop-blur-md dark:border-slate-800/70 dark:bg-slate-950/80">
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-2 px-4 py-3">
+        <div className={`mx-auto flex ${width} items-center justify-between gap-2 px-4 py-3`}>
           <NavLink to="/" className="press flex items-center gap-1.5 text-lg font-extrabold tracking-tight">
             <span className="inline-block transition-transform duration-500 hover:rotate-45">⚾</span>
             <span>야구장</span>
@@ -51,7 +53,7 @@ export function Layout() {
         </div>
       </header>
 
-      <main className={`mx-auto max-w-3xl px-4 py-8 ${onSeatMap ? '' : 'pb-24 sm:pb-8'}`}>
+      <main className={`mx-auto ${width} px-4 py-8 ${onSeatMap ? '' : 'pb-24 sm:pb-8'}`}>
         {/* key를 경로로 주면 화면이 바뀔 때마다 등장 모션이 다시 돈다. */}
         <div key={key} className="animate-fade-up">
           <Outlet />
