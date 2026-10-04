@@ -20,7 +20,7 @@ function zoneLabel(name: string) {
 }
 
 /**
- * 계열 토글 칩(줄바꿈으로 전부 보임)을 누르면 그 계열의 구역 이름 카드가 펼쳐진다. 여러 계열을 동시에 펼칠 수 있다.
+ * 계열 칩(줄바꿈으로 전부 보임)을 누르면 그 계열의 구역 이름 카드가 펼쳐진다. 한 번에 한 계열만 펼친다.
  * 카드를 누르면 지도에서 그 구역으로 줌인된다.
  */
 export function ZoneLegend({
@@ -41,15 +41,9 @@ export function ZoneLegend({
     groups.set(info.family, list)
   }
   const families = FAMILY_ORDER.filter((family) => groups.has(family))
-  // 계열 토글 상태. 처음에는 첫 계열만 펼쳐 둔다.
-  const [open, setOpen] = useState<Set<Family>>(() => new Set(families.slice(0, 1)))
-  const toggle = (family: Family) =>
-    setOpen((prev) => {
-      const next = new Set(prev)
-      if (next.has(family)) next.delete(family)
-      else next.add(family)
-      return next
-    })
+  // 한 번에 한 계열만 펼친다. 처음에는 첫 계열을 펼쳐 둔다.
+  const [selected, setSelected] = useState<Family | null>(families[0] ?? null)
+  const current = selected && groups.has(selected) ? selected : (families[0] ?? null)
 
   if (families.length === 0) return null
 
@@ -58,12 +52,12 @@ export function ZoneLegend({
       {/* 계열 토글은 줄바꿈으로 전부 보이게 한다. 가로 스크롤로 숨기지 않는다. */}
       <div className="flex flex-wrap gap-1.5">
         {families.map((family) => {
-          const on = open.has(family)
+          const on = family === current
           return (
             <button
               key={family}
               type="button"
-              onClick={() => toggle(family)}
+              onClick={() => setSelected(family)}
               aria-pressed={on}
               className="press rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors"
               style={
@@ -79,7 +73,7 @@ export function ZoneLegend({
       </div>
 
       {families
-        .filter((family) => open.has(family))
+        .filter((family) => family === current)
         .map((family) => {
           const list = [...groups.get(family)!].sort((a, b) => a.tier.localeCompare(b.tier) || a.half - b.half)
           const available = list.reduce((sum, { zone }) => sum + zone.availableSeats, 0)
