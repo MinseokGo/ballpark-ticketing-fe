@@ -4,7 +4,8 @@
 # 일정(날짜·시간)은 실제 경기 일정이 아니라 데모용 임의 값이다.
 # (ballpark-ticketing-be CLAUDE.md "테스트" 절의 예외 참고. 실제 KBO API 연동은 하지 않는다.)
 #
-# 좌석은 구역당 20행 x (필드석 60열 / 외야석 100열) — 15개 구역 합쳐서 약 2만 2천 석이다.
+# 좌석은 구역마다 행·열 수를 다르게 둔다 — 중앙석은 뒤로 갈수록 줄(행)이 많고, 외야석은 열이 길다.
+# 15개 구역 합치면 약 2만 2천 5백 석이다.
 # 구역 이름은 "중앙석 A" 같은 5개 구역(중앙석 / 1루·3루 필드석 / 1루·3루 외야석) x A~C 체계를
 # 따른다 — StadiumMap이 이 이름을 보고 실제 자리처럼 배치한다(src/components/StadiumMap.tsx 참고).
 # 이름이 이 체계를 벗어나면 StadiumMap은 원 둘레에 균등하게 나눠 그리는 방식으로 되돌아간다.
@@ -32,25 +33,25 @@ create_section_with_seats() {
 	echo "  - ${name} (id=${section_id}, ${price}원, ${rows}x${cols})"
 }
 
-create_section_with_seats "중앙석 A" "A" 50000 20 60
-create_section_with_seats "중앙석 B" "B" 40000 20 60
-create_section_with_seats "중앙석 C" "C" 30000 20 60
+create_section_with_seats "중앙석 A" "A" 50000 20 52
+create_section_with_seats "중앙석 B" "B" 40000 22 60
+create_section_with_seats "중앙석 C" "C" 30000 24 68
 
-create_section_with_seats "1루 필드석 A" "A" 35000 20 60
-create_section_with_seats "1루 필드석 B" "B" 28000 20 60
-create_section_with_seats "1루 필드석 C" "C" 22000 20 60
+create_section_with_seats "1루 필드석 A" "A" 35000 18 48
+create_section_with_seats "1루 필드석 B" "B" 28000 20 56
+create_section_with_seats "1루 필드석 C" "C" 22000 22 64
 
-create_section_with_seats "3루 필드석 A" "A" 35000 20 60
-create_section_with_seats "3루 필드석 B" "B" 28000 20 60
-create_section_with_seats "3루 필드석 C" "C" 22000 20 60
+create_section_with_seats "3루 필드석 A" "A" 35000 18 48
+create_section_with_seats "3루 필드석 B" "B" 28000 20 56
+create_section_with_seats "3루 필드석 C" "C" 22000 22 64
 
-create_section_with_seats "1루 외야석 A" "A" 15000 20 100
-create_section_with_seats "1루 외야석 B" "B" 12000 20 100
-create_section_with_seats "1루 외야석 C" "C" 9000 20 100
+create_section_with_seats "1루 외야석 A" "A" 15000 16 96
+create_section_with_seats "1루 외야석 B" "B" 12000 18 108
+create_section_with_seats "1루 외야석 C" "C" 9000 20 120
 
-create_section_with_seats "3루 외야석 A" "A" 15000 20 100
-create_section_with_seats "3루 외야석 B" "B" 12000 20 100
-create_section_with_seats "3루 외야석 C" "C" 9000 20 100
+create_section_with_seats "3루 외야석 A" "A" 15000 16 96
+create_section_with_seats "3루 외야석 B" "B" 12000 18 108
+create_section_with_seats "3루 외야석 C" "C" 9000 20 120
 
 echo "경기 생성 중..."
 

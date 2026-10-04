@@ -30,6 +30,21 @@ const MAX_ZOOM = 40
 const TAP_SLOP = 6
 
 const SELECTED_COLOR = '#10B981'
+
+// 같은 구역 계열 안에서 A(앞, 진함) → C(뒤, 연함)으로 색을 한 단계씩 옅게 해서 층을 구분한다.
+const TIER_TINT = [0, 0.18, 0.36]
+// 한 블록은 열 몇 개, 행 몇 개씩 묶여 보이는지 — 통로 간격을 주는 단위.
+const BLOCK_COLS = 12
+const BLOCK_ROWS = 6
+
+function tint(hex: string, amount: number): string {
+  const n = parseInt(hex.slice(1), 16)
+  const mix = (c: number) => Math.round(c + (255 - c) * amount)
+  const r = mix((n >> 16) & 255)
+  const g = mix((n >> 8) & 255)
+  const b = mix(n & 255)
+  return `#${[r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('')}`
+}
 const HELD_COLOR = '#FBBF24'
 const SOLD_COLOR = '#94A3B8'
 
@@ -132,22 +147,29 @@ function buildLayout(sections: StadiumSectionSeats[]): Layout {
     const rowThickness = (bOuter - bInner) / rowNumbers.length
     const colCount = Math.max(...rowNumbers.map((rowNo) => rowMap.get(rowNo)!.length))
     const colStep = (fEnd - fStart) / colCount
-    const color = FAMILY_COLOR[family]
+    const baseColor = FAMILY_COLOR[family]
+    const color = tint(baseColor, TIER_TINT[tierIndex]!)
 
     const rows = rowNumbers.map((rowNo, rowIndex) => {
       const rowItems = [...rowMap.get(rowNo)!].sort((a, b) => a.seatNo - b.seatNo)
       const rIn = bInner + rowIndex * rowThickness
       const rOut = rIn + rowThickness
+      // 블록 사이 통로: 열 묶음 경계와 구역 경계에서는 칸 사이 틈을 넓힌다.
+      const rowAisleBefore = rowIndex > 0 && rowIndex % BLOCK_ROWS === 0
+      const radialInset = rowAisleBefore ? 0.55 : 0.15
       return rowItems.map((item, colIndex) => {
         const t0 = fStart + colIndex * colStep
         const t1 = t0 + colStep
-        const gap = colStep * 0.12
+        const aisleLeft = colIndex === 0 || colIndex % BLOCK_COLS === 0
+        const aisleRight = colIndex === rowItems.length - 1 || (colIndex + 1) % BLOCK_COLS === 0
+        const insetA0 = colStep * (aisleLeft ? 0.5 : 0.12) / 2
+        const insetA1 = colStep * (aisleRight ? 0.5 : 0.12) / 2
         const cell: SeatCell = {
           item,
           sectionName: section.name,
           price: section.price,
           color,
-          path: annularPath(rIn + 0.15, rOut - 0.15, t0 + gap / 2, t1 - gap / 2),
+          path: annularPath(rIn + radialInset, rOut - 0.15, t0 + insetA0, t1 - insetA1),
         }
         cells.push(cell)
         return cell
