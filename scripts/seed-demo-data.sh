@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# ballpark-ticketing-be 관리자 API를 호출해 로컬 개발용 데모 데이터를 만든다.
+# 화면이 실제 서비스처럼 보이도록 구단 이름은 실제 KBO 10개 구단을 쓰지만,
+# 일정(날짜·시간)은 실제 경기 일정이 아니라 데모용 임의 값이다.
+# (ballpark-ticketing-be CLAUDE.md "테스트" 절의 예외 참고. 실제 KBO API 연동은 하지 않는다.)
+#
+# 사용법: BASE_URL=http://localhost:8081 ./scripts/seed-demo-data.sh
+set -euo pipefail
+
+BASE_URL="${BASE_URL:-http://localhost:8080}"
+
+post() {
+	curl -sS -X POST "${BASE_URL}${1}" -H 'Content-Type: application/json' -d "$2"
+}
+
+patch() {
+	curl -sS -X PATCH "${BASE_URL}${1}"
+}
+
+echo "구역·좌석 생성 중... (${BASE_URL})"
+
+create_section_with_seats() {
+	local name="$1" grade="$2" price="$3" rows="$4" cols="$5"
+	local section_id
+	section_id=$(post /api/admin/sections "{\"name\":\"${name}\",\"grade\":\"${grade}\",\"price\":${price}}" | jq -r '.id')
+	post "/api/admin/sections/${section_id}/seats" "{\"rowCount\":${rows},\"seatsPerRow\":${cols}}" >/dev/null
+	echo "  - ${name} (id=${section_id}, ${price}원, ${rows}x${cols})"
+}
+
+create_section_with_seats "내야 1루 R석" "R" 30000 5 10
+create_section_with_seats "내야 3루 R석" "R" 30000 5 10
+create_section_with_seats "외야 B석" "B" 12000 5 10
+
+echo "경기 생성 중..."
+
+create_game() {
+	local home="$1" away="$2" start_at="$3" open_at="$4"
+	post /api/admin/games "{\"homeTeam\":\"${home}\",\"awayTeam\":\"${away}\",\"startAt\":\"${start_at}\",\"ticketOpenAt\":\"${open_at}\"}" \
+		| jq -r '.id'
+}
+
+game1=$(create_game "두산 베어스" "LG 트윈스" "2026-10-10T18:30:00" "2026-10-05T11:00:00")
+game2=$(create_game "KIA 타이거즈" "삼성 라이온즈" "2026-10-11T18:30:00" "2026-10-05T11:00:00")
+game3=$(create_game "SSG 랜더스" "롯데 자이언츠" "2026-10-15T18:30:00" "2026-10-12T11:00:00")
+game4=$(create_game "한화 이글스" "NC 다이노스" "2026-10-16T18:30:00" "2026-10-13T11:00:00")
+game5=$(create_game "KT 위즈" "키움 히어로즈" "2026-10-17T18:30:00" "2026-10-14T11:00:00")
+
+echo "경기 ${game1}, ${game2} 예매 오픈 중..."
+patch "/api/admin/games/${game1}/open" >/dev/null
+patch "/api/admin/games/${game2}/open" >/dev/null
+
+echo "완료. OPEN: ${game1}(두산-LG), ${game2}(KIA-삼성) / SCHEDULED: ${game3}, ${game4}, ${game5}"
