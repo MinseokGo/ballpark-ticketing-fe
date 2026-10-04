@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
   cancelReservation,
@@ -11,12 +11,12 @@ import {
 } from '../api/booking'
 import { ApiError } from '../api/client'
 import { ErrorBanner, SuccessBanner } from '../components/Banner'
-import { StadiumMap } from '../components/StadiumMap'
+import { StadiumMap, type StadiumSectionSeats } from '../components/StadiumMap'
 import { useBookingHistory } from '../hooks/useBookingHistory'
 import { useUserId } from '../hooks/useUserId'
 import { FAMILY_COLOR, parseSectionName } from '../lib/stadiumLayout'
 import { teamColor } from '../lib/teamColors'
-import type { ReservationResponse, SeatMapItemResponse } from '../api/types'
+import type { ReservationResponse } from '../api/types'
 
 const MAX_SEATS = 4
 
@@ -106,32 +106,28 @@ export function BookingSeatMapPage() {
     })
   }
 
-  const sections: { sectionId: number; sectionName: string; items: SeatMapItemResponse[] }[] = []
-  const sectionsById = new Map<number, { sectionId: number; sectionName: string; items: SeatMapItemResponse[] }>()
-  for (const item of seatMapQuery.data ?? []) {
-    let group = sectionsById.get(item.sectionId)
-    if (!group) {
-      group = { sectionId: item.sectionId, sectionName: item.sectionName, items: [] }
-      sectionsById.set(item.sectionId, group)
-      sections.push(group)
+  // 좌석 수가 많아서 캔버스 배치 계산이 무겁다 — 데이터가 바뀔 때만 다시 묶는다.
+  const { stadiumSections, priceByGameSeatId } = useMemo(() => {
+    const priceBySectionId = new Map((availabilityQuery.data ?? []).map((section) => [section.sectionId, section.price] as const))
+    const grouped = new Map<number, StadiumSectionSeats>()
+    const priceByGameSeatId = new Map<number, number>()
+    for (const item of seatMapQuery.data ?? []) {
+      let group = grouped.get(item.sectionId)
+      if (!group) {
+        group = {
+          sectionId: item.sectionId,
+          name: item.sectionName,
+          price: priceBySectionId.get(item.sectionId) ?? 0,
+          items: [],
+        }
+        grouped.set(item.sectionId, group)
+      }
+      group.items.push(item)
+      priceByGameSeatId.set(item.gameSeatId, group.price)
     }
-    group.items.push(item)
-  }
+    return { stadiumSections: [...grouped.values()], priceByGameSeatId }
+  }, [seatMapQuery.data, availabilityQuery.data])
 
-  const stadiumSections = sections.map((section) => ({
-    sectionId: section.sectionId,
-    name: section.sectionName,
-    items: section.items,
-  }))
-
-  const priceBySectionId = new Map((availabilityQuery.data ?? []).map((section) => [section.sectionId, section.price]))
-  const priceByGameSeatId = new Map<number, number>()
-  for (const section of sections) {
-    const price = priceBySectionId.get(section.sectionId) ?? 0
-    for (const item of section.items) {
-      priceByGameSeatId.set(item.gameSeatId, price)
-    }
-  }
   const estimatedTotal = [...selectedSeatIds].reduce((sum, id) => sum + (priceByGameSeatId.get(id) ?? 0), 0)
 
   // 구역 이름 체계(중앙석/필드석/외야석)별 가격대를 보여주는 범례. 색은 StadiumMap과 같은 기준(FAMILY_COLOR)을 쓴다.
@@ -207,7 +203,7 @@ export function BookingSeatMapPage() {
       {stadiumSections.length > 0 && (
         <div className="rounded-3xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
           <p className="mb-3 text-center text-sm text-slate-500">
-            실제 자리 배치 그대로예요. 좌석을 탭해서 바로 골라보세요
+            실제 자리 배치 그대로예요. 확대해서 좌석을 골라보세요
           </p>
           <StadiumMap sections={stadiumSections} selectedIds={selectedSeatIds} onToggle={toggleSeat} />
           <div className="mt-4 flex flex-wrap justify-center gap-3">
