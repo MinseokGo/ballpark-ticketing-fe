@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   cancelReservation,
   createReservation,
@@ -18,10 +18,9 @@ import { SeatStatusLegend } from '../components/SeatStatusLegend'
 import { GameScoreBanner } from '../components/GameScoreBanner'
 import { SelectedSeatsBar, type SelectedSeat } from '../components/SelectedSeatsBar'
 import { ZoneLegend } from '../components/ZoneLegend'
-import { useBookingHistory } from '../hooks/useBookingHistory'
+import { useAuth } from '../hooks/useAuth'
 import { useLiveBroadcast, useLiveState } from '../hooks/useLiveGame'
 import { useSeatStream } from '../hooks/useSeatStream'
-import { CURRENT_USER_ID } from '../constants'
 import { teamColor } from '../lib/teamColors'
 import type { ReservationResponse, SeatMapItemResponse } from '../api/types'
 import { formatKst } from '../lib/serverTime'
@@ -38,7 +37,8 @@ export function BookingSeatMapPage() {
   const { gameId: gameIdParam } = useParams<{ gameId: string }>()
   const gameId = Number(gameIdParam)
   const queryClient = useQueryClient()
-  const { upsert: upsertHistory } = useBookingHistory()
+  const { user } = useAuth()
+  const navigate = useNavigate()
   const [selectedSeatIds, setSelectedSeatIds] = useState<Set<number>>(new Set())
   const [reservation, setReservation] = useState<ReservationResponse | null>(null)
   const [focus, setFocus] = useState<{ sectionId: number; nonce: number } | null>(null)
@@ -56,28 +56,15 @@ export function BookingSeatMapPage() {
   const refetchAll = () => {
     queryClient.invalidateQueries({ queryKey: ['seatMap', gameId] })
     queryClient.invalidateQueries({ queryKey: ['sectionAvailability', gameId] })
+    queryClient.invalidateQueries({ queryKey: ['myReservations'] })
   }
 
-  const recordHistory = (next: ReservationResponse) => {
-    const game = gameQuery.data
-    upsertHistory({
-      reservationId: next.id,
-      gameId,
-      homeTeam: game?.homeTeam ?? `경기 #${gameId}`,
-      awayTeam: game?.awayTeam ?? '',
-      status: next.status,
-      totalPrice: next.totalPrice,
-      seatCount: next.gameSeatIds.length,
-      updatedAt: new Date().toISOString(),
-    })
-  }
 
   const reserveMutation = useMutation({
-    mutationFn: () => createReservation(gameId, CURRENT_USER_ID, { gameSeatIds: [...selectedSeatIds] }),
+    mutationFn: () => createReservation(gameId, { gameSeatIds: [...selectedSeatIds] }),
     onSuccess: (created) => {
       setReservation(created)
       setSelectedSeatIds(new Set())
-      recordHistory(created)
       refetchAll()
     },
   })
@@ -88,7 +75,6 @@ export function BookingSeatMapPage() {
       setReservation((prev) => {
         if (!prev) return prev
         const next: ReservationResponse = { ...prev, status: 'CONFIRMED' }
-        recordHistory(next)
         return next
       })
       refetchAll()
@@ -99,7 +85,6 @@ export function BookingSeatMapPage() {
     mutationFn: () => cancelReservation(reservation!.id),
     onSuccess: (cancelled) => {
       setReservation(cancelled)
-      recordHistory(cancelled)
       refetchAll()
     },
   })
@@ -276,7 +261,7 @@ export function BookingSeatMapPage() {
           total={estimatedTotal}
           reserving={reserveMutation.isPending}
           onRemove={toggleSeat}
-          onReserve={() => reserveMutation.mutate()}
+          onReserve={() => (user ? reserveMutation.mutate() : navigate('/login'))}
         />
       )}
 

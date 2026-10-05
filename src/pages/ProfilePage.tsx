@@ -1,7 +1,7 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { cancelReservation, listGames } from '../api/booking'
+import { cancelReservation, listAllGames } from '../api/booking'
 import { ApiError } from '../api/client'
 import type { GameSummaryResponse } from '../api/types'
 import { ErrorBanner } from '../components/Banner'
@@ -49,24 +49,25 @@ function dateTimeLabel(iso: string) {
 }
 
 export function ProfilePage() {
-  const { entries, upsert } = useBookingHistory()
+  const { entries } = useBookingHistory()
+  const queryClient = useQueryClient()
   // 경기 시작 여부 판단용 기준 시각. 렌더 중에 Date.now()를 매번 읽지 않도록 마운트 때 한 번만 잡는다.
   const [now] = useState(() => Date.now())
   const [filter, setFilter] = useState<Filter>('ALL')
   // 경기 일시를 예매 기록에 붙이려고 경기 목록을 함께 받는다.
   const gamesQuery = useQuery({
     queryKey: ['games', 0, 100],
-    queryFn: () => listGames(0, 100),
+    queryFn: () => listAllGames(),
   })
   const gameById = useMemo(
-    () => new Map<number, GameSummaryResponse>((gamesQuery.data?.content ?? []).map((game) => [game.id, game])),
+    () => new Map<number, GameSummaryResponse>((gamesQuery.data ?? []).map((game) => [game.id, game])),
     [gamesQuery.data],
   )
 
   const cancelMutation = useMutation({
     mutationFn: (entry: BookingHistoryEntry) => cancelReservation(entry.reservationId),
-    onSuccess: (cancelled, entry) => {
-      upsert({ ...entry, status: cancelled.status, updatedAt: new Date().toISOString() })
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['myReservations'] })
     },
   })
 

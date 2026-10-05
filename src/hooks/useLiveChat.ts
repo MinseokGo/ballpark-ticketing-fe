@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react'
 import { listChatMessages, postChatMessage } from '../api/booking'
 import { API_BASE_URL } from '../api/client'
 import type { ChatMessageResponse } from '../api/types'
-import { CURRENT_USER_ID } from '../constants'
 import { streamSse } from '../lib/sse'
 
 const RECONNECT_MS = 3_000
@@ -80,7 +79,7 @@ export function useLiveChat(gameId: number) {
   }, [gameId, query.isSuccess, queryClient])
 
   const send = useMutation({
-    mutationFn: (content: string) => postChatMessage(gameId, CURRENT_USER_ID, content),
+    mutationFn: (content: string) => postChatMessage(gameId, content),
     onSuccess: (message) => {
       queryClient.setQueryData<ChatMessageResponse[]>(chatKey(gameId), (list) => appendMessage(list, message))
     },

@@ -1,4 +1,5 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { useAuth } from '../hooks/useAuth'
 import { useTheme, type ThemeChoice } from '../hooks/useTheme'
 
 const NAV_ITEMS = [
@@ -59,6 +60,7 @@ export function Layout() {
                 </NavLink>
               ))}
             </nav>
+            <AuthControl />
             <button
               type="button"
               onClick={cycle}
@@ -91,6 +93,35 @@ export function Layout() {
           </div>
         </nav>
       )}
+    </div>
+  )
+}
+
+/** 헤더의 로그인 상태: 로그인 전에는 로그인 버튼, 후에는 닉네임과 로그아웃. */
+function AuthControl() {
+  const { user, logout } = useAuth()
+  if (!user) {
+    return (
+      <NavLink
+        to="/login"
+        className="press ml-1 rounded-full bg-slate-900 px-4 py-2 text-xs font-bold text-white hover:bg-slate-700 dark:bg-slate-50 dark:text-slate-900"
+      >
+        로그인
+      </NavLink>
+    )
+  }
+  return (
+    <div className="ml-1 flex items-center gap-2">
+      <span className="hidden max-w-[7rem] truncate text-xs font-semibold text-slate-600 sm:inline dark:text-slate-300">
+        {user.nickname}
+      </span>
+      <button
+        type="button"
+        onClick={logout}
+        className="press rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:border-slate-300 dark:border-slate-700 dark:text-slate-300"
+      >
+        로그아웃
+      </button>
     </div>
   )
 }
