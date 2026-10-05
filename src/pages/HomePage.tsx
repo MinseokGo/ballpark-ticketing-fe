@@ -199,6 +199,12 @@ export function HomePage() {
   })
 
   const games = data?.content ?? []
+  // 진행 중인 경기는 전체 목록의 앞 50개(시작 시각 순) 밖에 있을 수 있어서, 서버에서 진행 중 경기만 따로 받는다.
+  const liveQuery = useQuery({
+    queryKey: ['games', 'live'],
+    queryFn: () => listGames(0, 50, 'LIVE'),
+    refetchInterval: 15_000,
+  })
   const byId = new Map(games.map((game) => [game.id, game] as const))
   // 끝났거나 취소된 경기는 다음 경기가 아니다.
   const upcoming = games
@@ -210,7 +216,7 @@ export function HomePage() {
     .filter((game) => sameDay(parseServerTime(game.startAt), now))
     .sort((a, b) => a.startAt.localeCompare(b.startAt))
   // 진행 중인 경기는 서버 진행 상태(progress)로 고른다.
-  const live = games.filter((game) => game.progress === 'LIVE')
+  const live = liveQuery.data?.content ?? []
   // 최근 결과: 끝난 경기를 최근 순으로 3개.
   const recentResults = games
     .filter((game) => game.progress === 'FINISHED')
