@@ -10,9 +10,10 @@ type Entry = { event: LiveEventResponse; prev: LiveEventResponse | null }
 const CARD_HEIGHT = 96
 // 카드끼리 겹치는 높이. 뒤 카드는 앞 카드 아래로 이만큼만 보이므로, 그 띠(아래쪽)에 제목과 점수를 둔다.
 const TAB_HEIGHT = 34
-// 쌓인 깊이에 따른 계단식 크기: 앞에서 멀어질수록 한 단계씩 작아진다(최대 STACK_DEPTH 단계).
+// 스크롤 위치의 카드(포커스)가 맨 앞에 오고, 거기서 멀어질수록 한 단계씩 작아진다(최대 STACK_DEPTH 단계).
 const STACK_DEPTH = 3
-const STEP_SCALE = 0.035
+const STEP_SCALE = 0.04
+const FOCUS_SCALE = 1.04
 
 const TONE: Record<string, { dot: string; text: string; chip: string }> = {
   GAME_STARTED: {
@@ -114,8 +115,8 @@ export function LiveTimeline({ events, team }: { events: LiveEventResponse[]; te
   const names: Team = team ?? { home: '홈', away: '원정' }
   const boxRef = useRef<HTMLDivElement>(null)
 
-  // 스크롤 위치의 가운데 카드가 가장 크게 보이도록 카드 중심과 상자 중심의 거리로 배율을 정한다.
-  // React 상태를 거치지 않고 스타일을 직접 바꿔서 스크롤 중에도 다시 그리지 않는다.
+  // 스크롤 위치(상자 가운데 줄)에 걸린 카드를 포커스로 잡는다. 포커스 카드가 맨 앞에 오고,
+  // 거기서 멀어질수록 한 단계씩 작아진다. 스타일은 스크롤 때 직접 바꿔서 다시 그리지 않는다.
   useEffect(() => {
     const box = boxRef.current
     if (!box) return
@@ -124,13 +125,22 @@ export function LiveTimeline({ events, team }: { events: LiveEventResponse[]; te
       frame = 0
       const boxRect = box.getBoundingClientRect()
       const middle = boxRect.top + boxRect.height / 2
-      box.querySelectorAll<HTMLElement>('[data-card]').forEach((el) => {
+      const cards = Array.from(box.querySelectorAll<HTMLElement>('[data-card]'))
+      let focus = 0
+      let best = Number.POSITIVE_INFINITY
+      cards.forEach((el, index) => {
         const rect = el.getBoundingClientRect()
-        const distance = Math.min(1, Math.abs(rect.top + rect.height / 2 - middle) / (boxRect.height / 2))
-        // 계단식 크기(쌓인 깊이) × 가운데 가까울수록 커지는 배율
-        const depth = Number(el.dataset.depth ?? 0)
-        const stepped = 1 - depth * STEP_SCALE
-        el.style.transform = `scale(${stepped * (1.06 - distance * 0.12)})`
+        const gap = Math.abs(rect.top + rect.height / 2 - middle)
+        if (gap < best) {
+          best = gap
+          focus = index
+        }
+      })
+      cards.forEach((el, index) => {
+        const distance = Math.abs(index - focus)
+        const scale = distance === 0 ? FOCUS_SCALE : 1 - Math.min(distance, STACK_DEPTH) * STEP_SCALE
+        el.style.transform = `scale(${scale})`
+        el.style.zIndex = String(1000 - distance)
       })
     }
     const onScroll = () => {
@@ -164,12 +174,10 @@ export function LiveTimeline({ events, team }: { events: LiveEventResponse[]; te
         <div
           key={entry.event.seq}
           data-card
-          data-depth={Math.min(index, STACK_DEPTH)}
           className="relative transition-transform duration-200 ease-out"
           style={{
             height: CARD_HEIGHT,
             marginTop: index === 0 ? 0 : TAB_HEIGHT - CARD_HEIGHT,
-            zIndex: 100 - index,
           }}
         >
           {/* 새 카드만 멀리서 다가오는 등장을 한다. 이미 있던 카드는 key가 같아서 다시 움직이지 않는다. */}
