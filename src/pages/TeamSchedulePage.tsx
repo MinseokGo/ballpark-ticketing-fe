@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
-import { listGames } from '../api/booking'
+import { listAllGames } from '../api/booking'
 import type { GameSummaryResponse } from '../api/types'
 import { GameCalendar } from '../components/GameCalendar'
 import { GameTile } from '../components/GameTile'
@@ -9,7 +9,6 @@ import { kstDateKey } from '../lib/serverTime'
 import { teamColor, teamInitial } from '../lib/teamColors'
 
 // 백엔드 목록 API의 최대 페이지 크기. 데모 데이터(경기 5개)는 한 번에 다 들어온다.
-const PAGE_SIZE = 100
 
 /** 경기 목록에서 팀 이름을 모은다. 백엔드에 팀 목록 API가 없어서 경기 데이터에서 만든다. */
 function collectTeams(games: GameSummaryResponse[]): string[] {
@@ -24,11 +23,11 @@ function collectTeams(games: GameSummaryResponse[]): string[] {
 export function TeamSchedulePage() {
   const [now] = useState(() => new Date())
   const { data, isPending, isError } = useQuery({
-    queryKey: ['games', 0, PAGE_SIZE],
-    queryFn: () => listGames(0, PAGE_SIZE),
+    queryKey: ['games', 'all'],
+    queryFn: () => listAllGames(),
   })
 
-  const games = useMemo(() => data?.content ?? [], [data])
+  const games = useMemo(() => data ?? [], [data])
   const teams = useMemo(() => collectTeams(games), [games])
   const [picked, setPicked] = useState<string | null>(null)
   // 고른 팀이 목록에서 사라지면(데이터 변경) 첫 팀으로 되돌린다.

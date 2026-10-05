@@ -25,6 +25,17 @@ export function listGames(
   return apiGet<PageResponse<GameSummaryResponse>>(`/api/games?page=${page}&size=${size}${filter}`)
 }
 
+/** 경기 목록을 전부 받는다(서버 최대 페이지 크기 100으로 끝까지 넘긴다). 목록 앞부분만 보던 문제를 막는다. */
+export async function listAllGames(progress?: GameProgress): Promise<GameSummaryResponse[]> {
+  const all: GameSummaryResponse[] = []
+  for (let page = 0; ; page++) {
+    const result = await listGames(page, 100, progress)
+    all.push(...result.content)
+    if (page + 1 >= result.totalPages || result.content.length === 0) break
+  }
+  return all
+}
+
 export function getGame(gameId: number): Promise<GameResponse> {
   return apiGet<GameResponse>(`/api/games/${gameId}`)
 }

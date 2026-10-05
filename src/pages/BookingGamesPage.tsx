@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { listGames } from '../api/booking'
+import { listAllGames } from '../api/booking'
 import type { GameStatus } from '../api/types'
 import { kstDateKey } from '../lib/serverTime'
 import { GameCalendar } from '../components/GameCalendar'
@@ -22,11 +22,11 @@ export function BookingGamesPage() {
   const [filter, setFilter] = useState<Filter>('ALL')
   const { data, isPending, isError } = useQuery({
     queryKey: ['games', 0, 50],
-    queryFn: () => listGames(0, 50),
+    queryFn: () => listAllGames(),
     refetchInterval: 15_000,
   })
 
-  const games = (data?.content ?? [])
+  const games = (data ?? [])
     .filter((game) => filter === 'ALL' || game.status === filter)
     .sort((a, b) => a.startAt.localeCompare(b.startAt))
 

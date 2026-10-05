@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState, type CSSProperties, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { listGames } from '../api/booking'
+import { listAllGames } from '../api/booking'
 import type { GameSummaryResponse } from '../api/types'
 import { EventBanner } from '../components/EventBanner'
 import { GameTile } from '../components/GameTile'
@@ -16,7 +16,6 @@ import { teamColor, teamInitial } from '../lib/teamColors'
 import { formatKst, kstDateKey, parseServerTime } from '../lib/serverTime'
 
 // 홈에서 쓰는 경기 목록 크기. 데모 데이터(5경기)는 전부 들어온다.
-const GAME_LIMIT = 50
 
 function greeting(hour: number) {
   if (hour < 12) return '좋은 아침이에요'
@@ -192,17 +191,17 @@ export function HomePage() {
   const [now] = useState(() => new Date())
   const { entries } = useBookingHistory()
   const { data, isPending } = useQuery({
-    queryKey: ['games', 0, GAME_LIMIT],
-    queryFn: () => listGames(0, GAME_LIMIT),
+    queryKey: ['games', 'all'],
+    queryFn: () => listAllGames(),
     // 경기가 진행 중으로 바뀌거나 끝나는 것을 페이지를 새로 열지 않고도 보이도록 주기적으로 받는다.
     refetchInterval: 15_000,
   })
 
-  const games = data?.content ?? []
+  const games = data ?? []
   // 진행 중인 경기는 전체 목록의 앞 50개(시작 시각 순) 밖에 있을 수 있어서, 서버에서 진행 중 경기만 따로 받는다.
   const liveQuery = useQuery({
     queryKey: ['games', 'live'],
-    queryFn: () => listGames(0, 50, 'LIVE'),
+    queryFn: () => listAllGames('LIVE'),
     refetchInterval: 15_000,
   })
   const byId = new Map(games.map((game) => [game.id, game] as const))
@@ -216,7 +215,7 @@ export function HomePage() {
     .filter((game) => sameDay(parseServerTime(game.startAt), now))
     .sort((a, b) => a.startAt.localeCompare(b.startAt))
   // 진행 중인 경기는 서버 진행 상태(progress)로 고른다.
-  const live = liveQuery.data?.content ?? []
+  const live = liveQuery.data ?? []
   // 최근 결과: 끝난 경기를 최근 순으로 3개.
   const recentResults = games
     .filter((game) => game.progress === 'FINISHED')
@@ -227,7 +226,7 @@ export function HomePage() {
   // 결제가 끝나지 않은 예매는 가장 먼저 알려야 해서 맨 위 알림으로 올린다.
   const pending = myActive.filter((entry) => entry.status === 'PENDING')
 
-  const { items, setSize, move, reset } = useHomeLayout()
+  const { items, setSize, move, moveToEnd, reset } = useHomeLayout()
   const [editing, setEditing] = useState(false)
 
   // 위젯마다 차지하는 칸(lg 기준 3칸 중)과 내용. 내용이 없으면 null이라 숨겨진다.
@@ -422,6 +421,7 @@ export function HomePage() {
           labels={WIDGET_LABELS}
           onSetSize={setSize}
           onMove={move}
+          onMoveToEnd={moveToEnd}
           onReset={reset}
           onClose={() => setEditing(false)}
         />

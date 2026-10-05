@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { cancelReservation, listGames } from '../api/booking'
+import { cancelReservation, listAllGames } from '../api/booking'
 import { ApiError } from '../api/client'
 import type { GameSummaryResponse } from '../api/types'
 import { ErrorBanner } from '../components/Banner'
@@ -57,10 +57,10 @@ export function ProfilePage() {
   // 경기 일시를 예매 기록에 붙이려고 경기 목록을 함께 받는다.
   const gamesQuery = useQuery({
     queryKey: ['games', 0, 100],
-    queryFn: () => listGames(0, 100),
+    queryFn: () => listAllGames(),
   })
   const gameById = useMemo(
-    () => new Map<number, GameSummaryResponse>((gamesQuery.data?.content ?? []).map((game) => [game.id, game])),
+    () => new Map<number, GameSummaryResponse>((gamesQuery.data ?? []).map((game) => [game.id, game])),
     [gamesQuery.data],
   )
 
