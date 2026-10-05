@@ -9,6 +9,7 @@ import { LiveGames } from '../components/LiveGames'
 import { Skeleton, SkeletonList } from '../components/Skeleton'
 import { useBookingHistory, type BookingHistoryEntry } from '../hooks/useBookingHistory'
 import { teamColor, teamInitial } from '../lib/teamColors'
+import { formatKst, kstDateKey, parseServerTime } from '../lib/serverTime'
 
 // 홈에서 쓰는 경기 목록 크기. 데모 데이터(5경기)는 전부 들어온다.
 const GAME_LIMIT = 50
@@ -20,23 +21,21 @@ function greeting(hour: number) {
 }
 
 function sameDay(a: Date, b: Date) {
-  return a.toDateString() === b.toDateString()
+  return kstDateKey(a) === kstDateKey(b)
 }
 
 /** 0 = 오늘, 1 = 내일 … 지난 날짜는 음수. 달력 날짜 기준으로 센다(시각 무시). */
 function dayDiff(iso: string, now: Date) {
-  const start = new Date(iso)
-  const from = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const to = new Date(start.getFullYear(), start.getMonth(), start.getDate())
-  return Math.round((to.getTime() - from.getTime()) / 86_400_000)
+  const toUtc = (key: string) => Date.parse(`${key}T00:00:00Z`)
+  return Math.round((toUtc(kstDateKey(iso)) - toUtc(kstDateKey(now))) / 86_400_000)
 }
 
 function timeLabel(iso: string) {
-  return new Date(iso).toLocaleString('ko-KR', { hour: 'numeric', minute: '2-digit' })
+  return formatKst(iso, { hour: 'numeric', minute: '2-digit' })
 }
 
 function dateLabel(iso: string) {
-  return new Date(iso).toLocaleString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })
+  return formatKst(iso, { month: 'long', day: 'numeric', weekday: 'short' })
 }
 
 /** 가장 가까운 예정 경기를 크게 보여준다. 두 팀 색으로 배경을 채우고 D-day와 상태를 올린다. */
@@ -184,11 +183,11 @@ export function HomePage() {
   const games = data?.content ?? []
   const byId = new Map(games.map((game) => [game.id, game] as const))
   const upcoming = games
-    .filter((game) => new Date(game.startAt) >= now || sameDay(new Date(game.startAt), now))
+    .filter((game) => parseServerTime(game.startAt) >= now || sameDay(parseServerTime(game.startAt), now))
     .sort((a, b) => a.startAt.localeCompare(b.startAt))
   const next = upcoming[0]
   const todays = games
-    .filter((game) => sameDay(new Date(game.startAt), now))
+    .filter((game) => sameDay(parseServerTime(game.startAt), now))
     .sort((a, b) => a.startAt.localeCompare(b.startAt))
   // 진행 중인 경기: 예정 경기 중 가장 가까운 2경기를 지금 중계 중인 것으로 취급한다(시뮬레이션).
   const live = upcoming.slice(0, 2)

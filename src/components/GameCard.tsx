@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { teamColor, teamInitial } from '../lib/teamColors'
 import type { GameSummaryResponse } from '../api/types'
+import { formatKst } from '../lib/serverTime'
 
 const STATUS_LABEL: Record<string, string> = {
   SCHEDULED: '예매 전',
@@ -39,7 +40,7 @@ export function GameCard({ game }: { game: GameSummaryResponse }) {
           {game.homeTeam} <span className="text-slate-400">vs</span> {game.awayTeam}
         </p>
         <p className="tabular text-sm text-slate-500">
-          {new Date(game.startAt).toLocaleString('ko-KR', {
+          {formatKst(game.startAt, {
             month: 'long',
             day: 'numeric',
             weekday: 'short',

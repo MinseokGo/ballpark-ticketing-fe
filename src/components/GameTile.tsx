@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import type { GameStatus, GameSummaryResponse } from '../api/types'
 import { teamColor, teamInitial } from '../lib/teamColors'
+import { formatKst, kstDateKey, kstDay, parseServerTime } from '../lib/serverTime'
 
 const STATUS_LABEL: Record<GameStatus, string> = {
   SCHEDULED: '예매 전',
@@ -21,7 +22,7 @@ const STATUS_TEXT: Record<GameStatus, string> = {
 }
 
 function sameDay(a: Date, b: Date) {
-  return a.toDateString() === b.toDateString()
+  return kstDateKey(a) === kstDateKey(b)
 }
 
 /**
@@ -29,7 +30,7 @@ function sameDay(a: Date, b: Date) {
  * 오늘 경기는 "오늘" 표시를 붙인다.
  */
 export function GameTile({ game, now }: { game: GameSummaryResponse; now: Date }) {
-  const start = new Date(game.startAt)
+  const start = parseServerTime(game.startAt)
   const today = sameDay(start, now)
   const open = game.status === 'OPEN'
 
@@ -37,10 +38,10 @@ export function GameTile({ game, now }: { game: GameSummaryResponse; now: Date }
     <div className="flex items-center gap-4 p-4">
       <div className="flex w-14 shrink-0 flex-col items-center justify-center rounded-2xl bg-slate-100 py-2 dark:bg-slate-800">
         <span className="text-[11px] font-semibold text-slate-500">
-          {start.toLocaleString('ko-KR', { month: 'short' })}
+          {formatKst(start, { month: 'short' })}
         </span>
-        <span className="tabular text-xl font-extrabold leading-none">{start.getDate()}</span>
-        <span className="mt-0.5 text-[11px] text-slate-500">{start.toLocaleString('ko-KR', { weekday: 'short' })}</span>
+        <span className="tabular text-xl font-extrabold leading-none">{kstDay(start)}</span>
+        <span className="mt-0.5 text-[11px] text-slate-500">{formatKst(start, { weekday: 'short' })}</span>
       </div>
 
       <div className="min-w-0 flex-1">
@@ -51,7 +52,7 @@ export function GameTile({ game, now }: { game: GameSummaryResponse; now: Date }
             </span>
           )}
           <p className="tabular text-xs text-slate-500">
-            {start.toLocaleString('ko-KR', { hour: 'numeric', minute: '2-digit' })} 시작
+            {formatKst(start, { hour: 'numeric', minute: '2-digit' })} 시작
           </p>
         </div>
         <div className="mt-1.5 flex items-center gap-2 text-sm font-bold">

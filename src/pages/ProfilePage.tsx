@@ -8,6 +8,7 @@ import { ErrorBanner } from '../components/Banner'
 import { Skeleton } from '../components/Skeleton'
 import { useBookingHistory, type BookingHistoryEntry } from '../hooks/useBookingHistory'
 import { teamColor, teamInitial } from '../lib/teamColors'
+import { formatKst, parseServerTime } from '../lib/serverTime'
 
 type Filter = 'ALL' | 'PENDING' | 'CONFIRMED' | 'CANCELLED'
 
@@ -37,7 +38,7 @@ const STATUS_STYLE: Record<BookingHistoryEntry['status'], { label: string; badge
 }
 
 function dateTimeLabel(iso: string) {
-  return new Date(iso).toLocaleString('ko-KR', {
+  return formatKst(iso, {
     month: 'long',
     day: 'numeric',
     weekday: 'short',
@@ -209,7 +210,7 @@ function ReservationCard({
   const style = STATUS_STYLE[entry.status]
   const cancellable = entry.status !== 'CANCELLED'
   // 경기 시작이 지난 예매는 취소 버튼을 숨긴다(목록 기준 시각). 경기 정보가 없으면 그대로 둔다.
-  const started = game ? new Date(game.startAt).getTime() <= now : false
+  const started = game ? parseServerTime(game.startAt).getTime() <= now : false
 
   return (
     <article className="flex h-full flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
@@ -245,7 +246,7 @@ function ReservationCard({
         <div>
           <dt className="text-[11px] text-slate-500">변경</dt>
           <dd className="tabular text-xs font-semibold">
-            {new Date(entry.updatedAt).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+            {formatKst(entry.updatedAt, { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
           </dd>
         </div>
       </dl>
