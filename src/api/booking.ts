@@ -48,6 +48,11 @@ export function postChatMessage(gameId: number, content: string): Promise<ChatMe
   return apiPost<ChatMessageResponse, { content: string }>(`/api/games/${gameId}/chat/messages`, { content })
 }
 
+/** 내가 지금 고르는 좌석을 알린다(예매가 아니다). 30초 뒤면 다른 사람 화면에서 사라진다. */
+export function postSeatSelection(gameId: number, gameSeatIds: number[]): Promise<void> {
+  return apiPost<void, { gameSeatIds: number[] }>(`/api/games/${gameId}/seats/selection`, { gameSeatIds })
+}
+
 /** 로그인한 사용자의 예약 목록(최신순). */
 export function listMyReservations(): Promise<MyReservationResponse[]> {
   return apiGet<MyReservationResponse[]>('/api/me/reservations')
