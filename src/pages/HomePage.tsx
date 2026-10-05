@@ -8,8 +8,10 @@ import { GameTile } from '../components/GameTile'
 import { LiveGames } from '../components/LiveGames'
 import { Skeleton, SkeletonList } from '../components/Skeleton'
 import { ScrollBox } from '../components/ScrollBox'
+import { StandingsCompact } from '../components/StandingsTable'
 import { useBookingHistory, type BookingHistoryEntry } from '../hooks/useBookingHistory'
 import { useHomeLayout } from '../hooks/useHomeLayout'
+import { useStandings } from '../hooks/useStandings'
 import { packLayout, type HomeWidgetId } from '../lib/homeGrid'
 import { HomeLayoutEditor } from '../components/HomeLayoutEditor'
 import { gameHref } from '../lib/gameRoutes'
@@ -155,6 +157,7 @@ const WIDGET_LABELS: Record<HomeWidgetId, string> = {
   live: '지금 진행 중',
   reservations: '내 예매',
   today: '오늘의 경기',
+  standings: '팀 순위',
   recent: '최근 결과',
   upcoming: '다가오는 경기',
   events: '이벤트',
@@ -218,6 +221,7 @@ export function HomePage() {
     .sort((a, b) => a.startAt.localeCompare(b.startAt))
   // 진행 중인 경기는 서버 진행 상태(progress)로 고른다.
   const live = liveQuery.data ?? []
+  const standings = useStandings()
   // 최근 결과: 끝난 경기를 최근 순으로 3개.
   const recentResults = games
     .filter((game) => game.progress === 'FINISHED')
@@ -300,6 +304,19 @@ export function HomePage() {
                 ))}
               </div>
             </ScrollBox>
+          )}
+        </Panel>
+      ),
+    },
+    standings: {
+      node: (
+        <Panel title="팀 순위" action={{ to: '/standings', label: '전체 순위' }}>
+          {standings.data ? (
+            <ScrollBox>
+              <StandingsCompact rows={standings.data} />
+            </ScrollBox>
+          ) : (
+            <Skeleton className="h-40" />
           )}
         </Panel>
       ),

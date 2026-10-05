@@ -2,7 +2,7 @@
 export const COLUMNS = 5
 export const MAX_SPAN = 5
 
-export const HOME_WIDGET_IDS = ['hero', 'live', 'reservations', 'today', 'recent', 'upcoming', 'events'] as const
+export const HOME_WIDGET_IDS = ['hero', 'live', 'reservations', 'today', 'standings', 'recent', 'upcoming', 'events'] as const
 export type HomeWidgetId = (typeof HOME_WIDGET_IDS)[number]
 
 export type WidgetItem = { id: HomeWidgetId; w: number; h: number }
@@ -17,6 +17,7 @@ export const DEFAULT_ITEMS: WidgetItem[] = [
   { id: 'live', w: 2, h: 3 },
   { id: 'reservations', w: 3, h: 2 },
   { id: 'today', w: 2, h: 2 },
+  { id: 'standings', w: 3, h: 3 },
   { id: 'recent', w: 5, h: 3 },
   { id: 'upcoming', w: 5, h: 3 },
   { id: 'events', w: 5, h: 2 },
