@@ -8,6 +8,7 @@ import { LiveGamePage } from './pages/LiveGamePage'
 import { RecordPage } from './pages/RecordPage'
 import { RecordsPage } from './pages/RecordsPage'
 import { ProfilePage } from './pages/ProfilePage'
+import { StandingsPage } from './pages/StandingsPage'
 import { TeamSchedulePage } from './pages/TeamSchedulePage'
 
 function App() {
@@ -21,6 +22,7 @@ function App() {
         <Route path="records" element={<RecordsPage />} />
         <Route path="games/:gameId/record" element={<RecordPage />} />
         <Route path="schedule" element={<TeamSchedulePage />} />
+        <Route path="standings" element={<StandingsPage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="login" element={<AuthPage />} />
       </Route>

@@ -5,6 +5,7 @@ import { useTheme, type ThemeChoice } from '../hooks/useTheme'
 const NAV_ITEMS = [
   { to: '/', label: '홈', icon: '🏠' },
   { to: '/booking', label: '예매', icon: '🎟️' },
+  { to: '/standings', label: '순위', icon: '📊' },
   { to: '/profile', label: '마이페이지', icon: '🙋' },
 ]
 

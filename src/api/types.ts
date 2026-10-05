@@ -209,3 +209,16 @@ export type ProblemDetail = {
   code?: string
   errors?: FieldError[]
 }
+
+export type StandingResponse = {
+  rank: number
+  teamName: string
+  games: number
+  wins: number
+  losses: number
+  draws: number
+  /** 무승부를 뺀 승률. 0~1 사이 소수 셋째 자리 */
+  winRate: number
+  /** 1위와의 게임차. 1위는 0 */
+  gamesBehind: number
+}
