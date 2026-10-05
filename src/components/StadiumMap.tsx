@@ -7,7 +7,7 @@ import {
   isOutfieldFamily,
   parseSectionName,
 } from '../lib/stadiumLayout'
-import { STADIUM_PALETTE } from '../lib/stadiumPalette'
+import { SEAT_STATUS_COLOR, STADIUM_PALETTE } from '../lib/stadiumPalette'
 import type { SeatMapItemResponse } from '../api/types'
 
 // 좌석은 수만 개라 DOM이 아니라 canvas에 그린다. 돔 기하는 "원 좌표계(CX, CY, 반지름, 각도)"로 계산하고,
@@ -22,14 +22,14 @@ const WALL_R = 72
 const OUTER_R = 130
 
 // 확대/축소 전 기본 화면에 돔 전체가 들어가는 논리 크기.
-const WORLD_W = 280
-const WORLD_H = 360
+// 돔 외곽(가로 260, 세로 약 338)에 맞춘 여백 최소 크기 — 화면을 꽉 채우도록 여백을 줄였다.
+const WORLD_W = 262
+const WORLD_H = 340
 
 const MIN_ZOOM = 1
 const MAX_ZOOM = 40
 const TAP_SLOP = 6
 
-const SELECTED_COLOR = '#10B981'
 
 // 같은 구역 계열 안에서 A(앞, 진함) → C(뒤, 연함)으로 색을 한 단계씩 옅게 해서 층을 구분한다.
 const TIER_TINT = [0, 0.18, 0.36]
@@ -45,8 +45,6 @@ function tint(hex: string, amount: number): string {
   const b = mix(n & 255)
   return `#${[r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('')}`
 }
-const HELD_COLOR = '#FBBF24'
-const SOLD_COLOR = '#94A3B8'
 
 const STATUS_LABEL: Record<string, string> = {
   AVAILABLE: '예매 가능',
@@ -72,6 +70,9 @@ type SeatCell = {
 }
 
 type Band = {
+  sectionId: number
+  // 구역 경계 전체를 한 번에 강조할 때 쓰는 외곽 경로.
+  outline: Path2D
   fStart: number
   fEnd: number
   bInner: number
@@ -186,7 +187,17 @@ function buildLayout(sections: StadiumSectionSeats[]): Layout {
       })
     })
 
-    bands.push({ fStart, fEnd, bInner, bOuter, rowThickness, colStep, rows })
+    bands.push({
+      sectionId: section.sectionId,
+      outline: annularPath(bInner, bOuter, fStart, fEnd),
+      fStart,
+      fEnd,
+      bInner,
+      bOuter,
+      rowThickness,
+      colStep,
+      rows,
+    })
     const midAngle = (fStart + fEnd) / 2
     labels.push({ text: section.name, family: false, angle: midAngle, radius: (bInner + bOuter) / 2 })
     // 계열 이름표는 계열당 한 번만(B층, 앞 블록 쪽에서) 단다.
@@ -250,11 +261,23 @@ function zoomAt(view: View, w: number, h: number, px: number, py: number, nextZo
   )
 }
 
+/** 구역의 중심을 화면 가운데에 놓는 보기(줌 배율은 구역 폭에 맞춘다). */
+function zoneView(band: Band, w: number, h: number): View {
+  const rMid = (band.bInner + band.bOuter) / 2
+  const angle = ((band.fStart + band.fEnd) / 2) * (Math.PI / 180)
+  const xc = CX + rMid * Math.sin(angle)
+  const yc = CY - rMid * Math.cos(angle)
+  const zoom = clamp(60 / (band.bOuter - band.bInner), 2.2, 5)
+  const k = Math.min(w / WORLD_W, h / WORLD_H) * zoom
+  return clampView({ zoom, panX: -k * (xc - CX), panY: -k * VS * (yc - CY) }, w, h)
+}
+
 function drawStadium(
   canvas: HTMLCanvasElement,
   layout: Layout,
   selectedIds: Set<number>,
   hovered: SeatCell | null,
+  focusSectionId: number | null,
   view: View,
   w: number,
   h: number,
@@ -298,17 +321,17 @@ function drawStadium(
   // 좌석: 선택 > 예매 가능(구역 색) > 선점 > 판매 완료 순
   for (const cell of layout.cells) {
     if (selectedIds.has(cell.item.gameSeatId)) {
-      ctx.fillStyle = SELECTED_COLOR
+      ctx.fillStyle = SEAT_STATUS_COLOR.selected
       ctx.globalAlpha = 1
     } else if (cell.item.status === 'AVAILABLE') {
       ctx.fillStyle = cell.color
       ctx.globalAlpha = 0.9
     } else if (cell.item.status === 'HELD') {
-      ctx.fillStyle = HELD_COLOR
-      ctx.globalAlpha = 0.55
+      ctx.fillStyle = SEAT_STATUS_COLOR.held
+      ctx.globalAlpha = 1
     } else {
-      ctx.fillStyle = SOLD_COLOR
-      ctx.globalAlpha = 0.4
+      ctx.fillStyle = SEAT_STATUS_COLOR.sold
+      ctx.globalAlpha = 1
     }
     ctx.fill(cell.path)
   }
@@ -326,6 +349,23 @@ function drawStadium(
   ctx.strokeStyle = 'rgba(100,116,139,0.45)'
   ctx.lineWidth = 1
   ctx.stroke()
+
+  // 구역 목록에서 고른 구역: 어떤 계열 색 위에서도 보이도록 흰 선 + 진한 선의 이중 테두리를 친다.
+  if (focusSectionId !== null) {
+    const band = layout.bands.find((b) => b.sectionId === focusSectionId)
+    if (band) {
+      ctx.globalAlpha = 1
+      ctx.lineJoin = 'round'
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.08)'
+      ctx.fill(band.outline)
+      ctx.strokeStyle = '#FFFFFF'
+      ctx.lineWidth = 4
+      ctx.stroke(band.outline)
+      ctx.strokeStyle = '#0F172A'
+      ctx.lineWidth = 1.8
+      ctx.stroke(band.outline)
+    }
+  }
 
   if (hovered) {
     ctx.strokeStyle = '#0F172A'
@@ -391,10 +431,13 @@ export function StadiumMap({
   sections,
   selectedIds,
   onToggle,
+  focus,
 }: {
   sections: StadiumSectionSeats[]
   selectedIds: Set<number>
   onToggle: (gameSeatId: number) => void
+  // 범례에서 구역을 누를 때마다 nonce가 바뀌어서, 같은 구역을 다시 눌러도 줌이 다시 돈다.
+  focus?: { sectionId: number; nonce: number } | null
 }) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -414,17 +457,66 @@ export function StadiumMap({
 
   const layout = useMemo(() => buildLayout(sections), [sections])
 
+  const viewRef = useRef(view)
+  useEffect(() => {
+    viewRef.current = view
+  }, [view])
+
+  // 구역 목록이 지도 아래에 놓이는 좁은 화면에서는 고른 구역의 줌인이 화면 밖에서 일어나므로,
+  // 지도가 안 보이면 지도 쪽으로 스크롤한다. 넓은 화면은 지도와 목록이 나란히 있어서 움직이지 않는다.
+  // 크기 변화에는 반응하지 않도록 focus에만 건다.
+  useEffect(() => {
+    if (!focus) return
+    const el = wrapRef.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    const visible = rect.top >= 0 && rect.bottom <= window.innerHeight
+    if (visible) return
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    el.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' })
+  }, [focus])
+
+  // 구역을 고르면 현재 화면에서 그 구역 중심으로 부드럽게 줌인한다.
+  useEffect(() => {
+    if (!focus) return
+    const band = layout.bands.find((b) => b.sectionId === focus.sectionId)
+    if (!band) return
+    const from = viewRef.current
+    const to = zoneView(band, size.w, size.h)
+    const startedAt = performance.now()
+    let frame = 0
+    const step = (now: number) => {
+      const t = Math.min(1, (now - startedAt) / 450)
+      const e = 1 - Math.pow(1 - t, 3)
+      setView({
+        zoom: from.zoom + (to.zoom - from.zoom) * e,
+        panX: from.panX + (to.panX - from.panX) * e,
+        panY: from.panY + (to.panY - from.panY) * e,
+      })
+      if (t < 1) frame = requestAnimationFrame(step)
+    }
+    frame = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(frame)
+  }, [focus, layout, size])
+
   useEffect(() => {
     const el = wrapRef.current
     if (!el) return
     const update = () => {
       const w = el.clientWidth
-      setSize({ w, h: Math.min(640, Math.max(420, Math.round(w * 0.9))) })
+      // 세로는 화면 높이에 맞춘다. 가로만 보고 키우면 큰 화면에서 지도가 목록보다 너무 커진다.
+      const h = Math.min(760, Math.max(460, Math.round(Math.min(w * 1.05, window.innerHeight * 0.8))))
+      setSize({ w, h })
+      // 돔 비율(가로:세로 약 0.77)에 맞춰 세로를 잡고, 너무 커지지 않게만 제한한다.
     }
     update()
     const observer = new ResizeObserver(update)
     observer.observe(el)
-    return () => observer.disconnect()
+    window.addEventListener('resize', update)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', update)
+    }
   }, [])
 
   useEffect(() => {
@@ -432,10 +524,10 @@ export function StadiumMap({
     if (!canvas) return
     const dpr = window.devicePixelRatio || 1
     const id = requestAnimationFrame(() =>
-      drawStadium(canvas, layout, selectedIds, hoverCell, view, size.w, size.h, dpr),
+      drawStadium(canvas, layout, selectedIds, hoverCell, focus?.sectionId ?? null, view, size.w, size.h, dpr),
     )
     return () => cancelAnimationFrame(id)
-  }, [layout, selectedIds, hoverCell, view, size])
+  }, [layout, selectedIds, hoverCell, focus, view, size])
 
   // 휠은 기본 스크롤과 충돌하므로 passive: false로 직접 붙인다.
   useEffect(() => {
@@ -529,7 +621,7 @@ export function StadiumMap({
     setView((prev) => zoomAt(prev, size.w, size.h, size.w / 2, size.h / 2, clamp(prev.zoom * factor, MIN_ZOOM, MAX_ZOOM)))
 
   return (
-    <div ref={wrapRef} className="relative w-full select-none">
+    <div ref={wrapRef} className="relative w-full scroll-mt-24 select-none">
       <canvas
         ref={canvasRef}
         role="img"

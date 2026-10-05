@@ -14,11 +14,13 @@ import { ErrorBanner } from '../components/Banner'
 import { Celebration } from '../components/Celebration'
 import { Skeleton } from '../components/Skeleton'
 import { StadiumMap, type StadiumSectionSeats } from '../components/StadiumMap'
+import { SeatStatusLegend } from '../components/SeatStatusLegend'
+import { SelectedSeatsBar, type SelectedSeat } from '../components/SelectedSeatsBar'
+import { ZoneLegend } from '../components/ZoneLegend'
 import { useBookingHistory } from '../hooks/useBookingHistory'
 import { useUserId } from '../hooks/useUserId'
-import { FAMILY_COLOR, parseSectionName } from '../lib/stadiumLayout'
 import { teamColor } from '../lib/teamColors'
-import type { ReservationResponse } from '../api/types'
+import type { ReservationResponse, SeatMapItemResponse } from '../api/types'
 
 const MAX_SEATS = 4
 
@@ -37,6 +39,7 @@ export function BookingSeatMapPage() {
   const { upsert: upsertHistory } = useBookingHistory()
   const [selectedSeatIds, setSelectedSeatIds] = useState<Set<number>>(new Set())
   const [reservation, setReservation] = useState<ReservationResponse | null>(null)
+  const [focus, setFocus] = useState<{ sectionId: number; nonce: number } | null>(null)
 
   const gameQuery = useQuery({ queryKey: ['game', gameId], queryFn: () => getGame(gameId) })
   const seatMapQuery = useQuery({ queryKey: ['seatMap', gameId], queryFn: () => getSeatMap(gameId) })
@@ -109,10 +112,11 @@ export function BookingSeatMapPage() {
   }
 
   // 좌석 수가 많아서 캔버스 배치 계산이 무겁다 — 데이터가 바뀔 때만 다시 묶는다.
-  const { stadiumSections, priceByGameSeatId } = useMemo(() => {
+  const { stadiumSections, priceByGameSeatId, seatByGameSeatId } = useMemo(() => {
     const priceBySectionId = new Map((availabilityQuery.data ?? []).map((section) => [section.sectionId, section.price] as const))
     const grouped = new Map<number, StadiumSectionSeats>()
     const priceByGameSeatId = new Map<number, number>()
+    const seatByGameSeatId = new Map<number, SeatMapItemResponse>()
     for (const item of seatMapQuery.data ?? []) {
       let group = grouped.get(item.sectionId)
       if (!group) {
@@ -126,24 +130,32 @@ export function BookingSeatMapPage() {
       }
       group.items.push(item)
       priceByGameSeatId.set(item.gameSeatId, group.price)
+      seatByGameSeatId.set(item.gameSeatId, item)
     }
-    return { stadiumSections: [...grouped.values()], priceByGameSeatId }
+    return { stadiumSections: [...grouped.values()], priceByGameSeatId, seatByGameSeatId }
   }, [seatMapQuery.data, availabilityQuery.data])
 
   const estimatedTotal = [...selectedSeatIds].reduce((sum, id) => sum + (priceByGameSeatId.get(id) ?? 0), 0)
+  // 고른 순서대로 보여준다. Set은 삽입 순서를 유지하므로 그대로 쓴다.
+  const selectedSeats: SelectedSeat[] = [...selectedSeatIds].flatMap((id) => {
+    const seat = seatByGameSeatId.get(id)
+    if (!seat) return []
+    return [{
+      gameSeatId: id,
+      sectionName: seat.sectionName,
+      rowNo: seat.rowNo,
+      seatNo: seat.seatNo,
+      price: priceByGameSeatId.get(id) ?? 0,
+    }]
+  })
 
-  // 구역 이름 체계(중앙석/필드석/외야석)별 가격대를 보여주는 범례. 색은 StadiumMap과 같은 기준(FAMILY_COLOR)을 쓴다.
-  const familyPriceRanges = new Map<string, { color: string; min: number; max: number }>()
-  for (const section of availabilityQuery.data ?? []) {
-    const info = parseSectionName(section.name)
-    if (!info) continue
-    const existing = familyPriceRanges.get(info.family)
-    familyPriceRanges.set(info.family, {
-      color: FAMILY_COLOR[info.family],
-      min: Math.min(existing?.min ?? section.price, section.price),
-      max: Math.max(existing?.max ?? section.price, section.price),
-    })
-  }
+  const zoneInfos = (availabilityQuery.data ?? []).map((section) => ({
+    sectionId: section.sectionId,
+    name: section.name,
+    price: section.price,
+    availableSeats: section.availableSeats,
+    totalSeats: section.totalSeats,
+  }))
 
   const activeMutationError = reserveMutation.error ?? payMutation.error ?? cancelMutation.error
   const game = gameQuery.data
@@ -202,62 +214,55 @@ export function BookingSeatMapPage() {
         )}
       </div>
 
-      {stadiumSections.length > 0 && (
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
-          <p className="mb-3 text-center text-sm text-slate-500">
-            실제 자리 배치 그대로예요. 확대해서 좌석을 골라보세요
-          </p>
-          <StadiumMap sections={stadiumSections} selectedIds={selectedSeatIds} onToggle={toggleSeat} />
-          <div className="mt-4 flex flex-wrap justify-center gap-3">
-            {[...familyPriceRanges.entries()].map(([family, info]) => (
-              <span key={family} className="flex items-center gap-1.5 text-xs text-slate-500">
-                <span className="size-2.5 rounded-full" style={{ backgroundColor: info.color }} />
-                {family} {info.min.toLocaleString()}
-                {info.min !== info.max ? `~${info.max.toLocaleString()}` : ''}원
-              </span>
-            ))}
-          </div>
+      <div className="space-y-6 lg:grid lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start lg:gap-6 lg:space-y-0">
+        {stadiumSections.length > 0 && (
+        <div className="overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-b from-sky-50 via-white to-white p-3 shadow-sm dark:border-slate-800 dark:from-slate-900 dark:via-slate-900 dark:to-slate-950">
+          <StadiumMap
+            sections={stadiumSections}
+            selectedIds={selectedSeatIds}
+            onToggle={toggleSeat}
+            focus={focus}
+          />
+          <p className="pb-2 text-center text-xs text-slate-500">드래그로 옮기고, 두 손가락이나 휠로 확대해 좌석을 고르세요</p>
         </div>
       )}
 
-      {seatMapQuery.isPending && <Skeleton className="h-[420px]" />}
-
-      <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
-        <span className="flex items-center gap-1">
-          <span className="inline-block size-3 rounded-full border border-slate-300 bg-slate-300" /> 선점·판매됨
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="inline-block size-3 rounded-full border border-emerald-600 bg-emerald-500" /> 선택함
-        </span>
-        <span>· 색이 있는 조각은 그 구역의 예매 가능한 좌석이에요</span>
+      {zoneInfos.length > 0 && (
+        <section className="flex flex-col rounded-3xl border border-slate-200 p-5 lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] dark:border-slate-800">
+          <div className="mb-3 flex items-baseline justify-between">
+            <h2 className="font-bold">구역 둘러보기</h2>
+            <p className="text-xs text-slate-500">구역을 누르면 지도에서 그 자리로 줌인돼요</p>
+          </div>
+          <ZoneLegend
+            zones={zoneInfos}
+            activeSectionId={focus?.sectionId ?? null}
+            onSelect={(sectionId) =>
+              setFocus((prev) => ({ sectionId, nonce: (prev?.nonce ?? 0) + 1 }))
+            }
+          />
+          <SeatStatusLegend />
+        </section>
+      )}
       </div>
+
+      {seatMapQuery.isPending && <Skeleton className="h-[420px]" />}
 
       {activeMutationError && <ErrorBanner error={activeMutationError as ApiError} />}
 
       {!reservation && (
-        <div className="animate-slide-up fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white/95 shadow-[0_-8px_24px_-12px_rgba(15,23,42,0.18)] backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
-          <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-4 py-4">
-            <p className="text-sm">
-              선택한 좌석 <strong className="tabular">{selectedSeatIds.size}</strong> / {MAX_SEATS}
-              {selectedSeatIds.size > 0 && (
-                <span className="tabular ml-2 text-slate-500">{estimatedTotal.toLocaleString()}원</span>
-              )}
-            </p>
-            <button
-              type="button"
-              disabled={selectedSeatIds.size === 0 || reserveMutation.isPending}
-              onClick={() => reserveMutation.mutate()}
-              className="press rounded-full bg-blue-600 px-6 py-3 text-sm font-bold text-white shadow-sm shadow-blue-600/30 transition-colors hover:bg-blue-700 disabled:opacity-40 disabled:shadow-none"
-            >
-              {reserveMutation.isPending ? '예매하는 중...' : '이 좌석으로 예매하기'}
-            </button>
-          </div>
-        </div>
+        <SelectedSeatsBar
+          seats={selectedSeats}
+          max={MAX_SEATS}
+          total={estimatedTotal}
+          reserving={reserveMutation.isPending}
+          onRemove={toggleSeat}
+          onReserve={() => reserveMutation.mutate()}
+        />
       )}
 
       {reservation && (
         <div className="animate-slide-up fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white/95 shadow-[0_-8px_24px_-12px_rgba(15,23,42,0.18)] backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
-          <div className="mx-auto max-w-3xl space-y-3 px-4 py-4">
+          <div className="w-full space-y-3 px-4 py-4 sm:px-6 lg:px-10">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-slate-500">예약 #{reservation.id}</p>

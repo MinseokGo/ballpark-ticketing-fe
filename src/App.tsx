@@ -8,6 +8,7 @@ import { HomePage } from './pages/HomePage'
 import { ProfilePage } from './pages/ProfilePage'
 import { SeatsPage } from './pages/SeatsPage'
 import { SectionsPage } from './pages/SectionsPage'
+import { TeamSchedulePage } from './pages/TeamSchedulePage'
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
         <Route index element={<HomePage />} />
         <Route path="booking" element={<BookingGamesPage />} />
         <Route path="booking/:gameId" element={<BookingSeatMapPage />} />
+        <Route path="schedule" element={<TeamSchedulePage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="admin" element={<AdminHomePage />} />
         <Route path="admin/sections" element={<SectionsPage />} />

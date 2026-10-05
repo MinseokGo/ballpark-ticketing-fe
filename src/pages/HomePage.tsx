@@ -53,7 +53,7 @@ export function HomePage() {
         </div>
       </section>
 
-      <section className="animate-fade-up grid grid-cols-2 gap-3 [animation-delay:240ms]">
+      <section className="animate-fade-up grid grid-cols-3 gap-3 [animation-delay:240ms]">
         <Link
           to="/booking"
           className="press rounded-2xl border border-slate-200 bg-white p-5 hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-700"
@@ -61,6 +61,14 @@ export function HomePage() {
           <p className="text-2xl">🎟️</p>
           <p className="mt-2 font-semibold">예매하기</p>
           <p className="text-sm text-slate-500">좌석을 고르고 결제까지</p>
+        </Link>
+        <Link
+          to="/schedule"
+          className="press rounded-2xl border border-slate-200 bg-white p-5 hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-700"
+        >
+          <p className="text-2xl">📅</p>
+          <p className="mt-2 font-semibold">팀별 일정</p>
+          <p className="text-sm text-slate-500">응원 팀의 경기 보기</p>
         </Link>
         <Link
           to="/profile"
