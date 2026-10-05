@@ -2,6 +2,8 @@ import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { listGames } from '../api/booking'
 import type { GameStatus } from '../api/types'
+import { kstDateKey } from '../lib/serverTime'
+import { GameCalendar } from '../components/GameCalendar'
 import { GameTile } from '../components/GameTile'
 import { SkeletonList } from '../components/Skeleton'
 
@@ -70,6 +72,12 @@ export function BookingGamesPage() {
           해당하는 경기가 없어요.
         </p>
       )}
+
+      <GameCalendar
+        games={games}
+        todayKey={kstDateKey(now)}
+        renderGame={(game) => <GameTile key={game.id} game={game} now={now} />}
+      />
 
       <div className="depth-stage grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {games.map((game, index) => (
