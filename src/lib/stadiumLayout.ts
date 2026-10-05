@@ -1,4 +1,4 @@
-import { STADIUM_PALETTE } from './stadiumPalette'
+import { FAMILY_PALETTE } from './stadiumPalette'
 
 export type Tier = 'A' | 'B' | 'C'
 export type Family = '중앙석' | '1루 필드석' | '1루 외야석' | '3루 필드석' | '3루 외야석'
@@ -16,13 +16,7 @@ export const FAMILY_ANGLES: Record<Family, [number, number]> = {
   '3루 외야석': [315, 360],
 }
 
-export const FAMILY_COLOR: Record<Family, string> = {
-  중앙석: STADIUM_PALETTE[0]!,
-  '1루 필드석': STADIUM_PALETTE[1]!,
-  '1루 외야석': STADIUM_PALETTE[2]!,
-  '3루 필드석': STADIUM_PALETTE[3]!,
-  '3루 외야석': STADIUM_PALETTE[4]!,
-}
+export const FAMILY_COLOR: Record<Family, string> = FAMILY_PALETTE
 
 export const TIER_ORDER: Tier[] = ['A', 'B', 'C']
 

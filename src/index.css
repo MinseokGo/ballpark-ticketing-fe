@@ -1,7 +1,14 @@
 @import "tailwindcss";
 
+/* 다크 모드는 html 요소의 .dark 클래스로 켠다(useTheme). 시스템 설정은 useTheme이 클래스로 반영한다. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
+}
+
+:root.dark {
+  color-scheme: dark;
 }
 
 body {
@@ -73,8 +80,10 @@ body {
   }
 }
 
+/* fill-mode는 backwards: both로 두면 끝난 뒤에도 transform이 남아서, 안에 있는 fixed 요소(하단 바)가
+   뷰포트가 아니라 이 래퍼 기준으로 위치해 스크롤과 함께 움직인다. */
 .animate-fade-up {
-  animation: fade-up 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: fade-up 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
 }
 
 .animate-pop {
@@ -91,11 +100,9 @@ body {
   animation: shimmer 1.4s infinite linear;
 }
 
-@media (prefers-color-scheme: dark) {
-  .skeleton {
-    background: linear-gradient(90deg, #1e293b 25%, #334155 37%, #1e293b 63%);
-    background-size: 400px 100%;
-  }
+.dark .skeleton {
+  background: linear-gradient(90deg, #1e293b 25%, #334155 37%, #1e293b 63%);
+  background-size: 400px 100%;
 }
 
 /* 버튼을 누르는 순간 살짝 줄어드는 피드백 — 네이티브 앱 느낌. */

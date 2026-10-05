@@ -1,30 +1,79 @@
 import { useQuery } from '@tanstack/react-query'
-import { GameCard } from '../components/GameCard'
-import { SkeletonList } from '../components/Skeleton'
+import { useState } from 'react'
 import { listGames } from '../api/booking'
+import type { GameStatus } from '../api/types'
+import { GameTile } from '../components/GameTile'
+import { SkeletonList } from '../components/Skeleton'
+
+type Filter = 'ALL' | GameStatus
+
+const FILTERS: { value: Filter; label: string }[] = [
+  { value: 'ALL', label: '전체' },
+  { value: 'OPEN', label: '예매 중' },
+  { value: 'SCHEDULED', label: '예매 전' },
+  { value: 'CLOSED', label: '예매 마감' },
+]
 
 export function BookingGamesPage() {
+  // 마운트 시점 한 번만 읽어서 렌더 중에 시각이 흔들리지 않게 한다.
+  const [now] = useState(() => new Date())
+  const [filter, setFilter] = useState<Filter>('ALL')
   const { data, isPending, isError } = useQuery({
-    queryKey: ['games', 0, 20],
-    queryFn: () => listGames(0, 20),
+    queryKey: ['games', 0, 50],
+    queryFn: () => listGames(0, 50),
   })
+
+  const games = (data?.content ?? [])
+    .filter((game) => filter === 'ALL' || game.status === filter)
+    .sort((a, b) => a.startAt.localeCompare(b.startAt))
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-extrabold tracking-tight">예매하기</h1>
-        <p className="mt-1 text-slate-500">
-          경기를 골라 좌석을 선택하고 예매·결제까지 해 본다. "예매 중"인 경기만 좌석을 고를 수 있다.
+      <header className="animate-fade-up flex flex-wrap items-end justify-between gap-4">
+        <div className="space-y-1">
+          <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">예매</p>
+          <h1 className="text-3xl font-extrabold tracking-tight">경기 고르기</h1>
+          <p className="text-sm text-slate-500">예매 중인 경기만 좌석을 고를 수 있어요.</p>
+        </div>
+        <div className="scrollbar-none -mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+          {FILTERS.map((item) => {
+            const active = filter === item.value
+            return (
+              <button
+                key={item.value}
+                type="button"
+                onClick={() => setFilter(item.value)}
+                aria-pressed={active}
+                className={[
+                  'press shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition-colors',
+                  active
+                    ? 'bg-slate-900 text-white dark:bg-slate-50 dark:text-slate-900'
+                    : 'border border-slate-200 bg-white text-slate-600 hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300',
+                ].join(' ')}
+              >
+                {item.label}
+              </button>
+            )
+          })}
+        </div>
+      </header>
+
+      {isPending && <SkeletonList count={6} />}
+      {isError && (
+        <p className="rounded-2xl border border-dashed border-slate-200 p-8 text-center text-sm text-slate-500 dark:border-slate-700">
+          경기 목록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
         </p>
-      </div>
+      )}
+      {data && games.length === 0 && (
+        <p className="rounded-2xl border border-dashed border-slate-200 p-8 text-center text-sm text-slate-500 dark:border-slate-700">
+          해당하는 경기가 없어요.
+        </p>
+      )}
 
-      {isPending && <SkeletonList count={4} />}
-      {isError && <p className="text-sm text-red-600">경기 목록을 불러오지 못했다.</p>}
-
-      <div className="space-y-2">
-        {data?.content.map((game, index) => (
-          <div key={game.id} className="animate-fade-up" style={{ animationDelay: `${index * 50}ms` }}>
-            <GameCard game={game} />
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {games.map((game, index) => (
+          <div key={game.id} className="animate-fade-up" style={{ animationDelay: `${Math.min(index, 8) * 40}ms` }}>
+            <GameTile game={game} now={now} />
           </div>
         ))}
       </div>
