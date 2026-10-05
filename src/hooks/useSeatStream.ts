@@ -15,9 +15,14 @@ const FLUSH_MS = 250
  * onChanges로 호출한 쪽에 알린다(내가 고른 좌석이 빠졌는지 확인할 때 쓴다).
  * 연결이 끊기면 좌석표를 다시 받는다.
  */
-export function useSeatStream(gameId: number, onChanges: (changes: SeatChange[]) => void): boolean {
+export function useSeatStream(
+  gameId: number,
+  onChanges: (changes: SeatChange[]) => void,
+): { connected: boolean; selections: Map<number, number> } {
   const queryClient = useQueryClient()
   const [connected, setConnected] = useState(false)
+  // 지금 고르는 중인 좌석: 좌석 번호 → 고른 사용자 번호
+  const [selections, setSelections] = useState<Map<number, number>>(() => new Map())
   const onChangesRef = useRef(onChanges)
 
   useEffect(() => {
@@ -57,6 +62,11 @@ export function useSeatStream(gameId: number, onChanges: (changes: SeatChange[])
                 // 연결 전에 바뀐 좌석이 있을 수 있으니, 연결 뒤 한 번 다시 받는다.
                 queryClient.invalidateQueries({ queryKey: ['seatMap', gameId] })
               }
+              if (frame.event === 'selection') {
+                const list = JSON.parse(frame.data) as Array<{ gameSeatId: number; userId: number }>
+                setSelections(new Map(list.map((item) => [item.gameSeatId, item.userId] as const)))
+                return
+              }
               const changes = JSON.parse(frame.data) as SeatChange[]
               pending.push(...changes)
               if (timer === undefined) timer = window.setTimeout(flush, FLUSH_MS)
@@ -87,5 +97,5 @@ export function useSeatStream(gameId: number, onChanges: (changes: SeatChange[])
     }
   }, [gameId, queryClient])
 
-  return connected
+  return { connected, selections }
 }

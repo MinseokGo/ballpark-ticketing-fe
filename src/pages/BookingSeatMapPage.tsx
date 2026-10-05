@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   cancelReservation,
+  postSeatSelection,
   createReservation,
   getGame,
   getSeatMap,
@@ -100,7 +101,7 @@ export function BookingSeatMapPage() {
     const timer = window.setTimeout(() => setNotice(null), 5000)
     return () => window.clearTimeout(timer)
   }, [notice])
-  const seatLive = useSeatStream(gameId, (changes) => {
+  const seatStream = useSeatStream(gameId, (changes) => {
     if (reserveMutation.isPending) return
     const taken = changes.filter((change) => change.status !== 'AVAILABLE' && selectedRef.current.has(change.gameSeatId))
     if (taken.length === 0) return
@@ -111,6 +112,38 @@ export function BookingSeatMapPage() {
     })
     setNotice(`방금 다른 사용자가 고른 좌석 ${taken.length}석이 빠졌어요. 다시 골라 주세요.`)
   })
+  const seatLive = seatStream.connected
+  // 다른 사용자가 지금 고르는 좌석(내 것은 제외). 예매가 아니라서 잠깐 보였다가 사라진다.
+  const pickedByOthers = useMemo(
+    () => new Map([...seatStream.selections].filter(([, userId]) => userId !== user?.id)),
+    [seatStream.selections, user?.id],
+  )
+
+  // 내가 고른 좌석을 다른 사용자에게 알린다. 고르는 동안 15초마다 갱신하고, 비우거나 떠나면 바로 지운다.
+  const userRef = useRef(user)
+  useEffect(() => {
+    userRef.current = user
+  }, [user])
+  useEffect(() => {
+    if (!user) return
+    if (selectedSeatIds.size === 0) {
+      postSeatSelection(gameId, []).catch(() => undefined)
+      return
+    }
+    const send = () => postSeatSelection(gameId, [...selectedSeatIds]).catch(() => undefined)
+    const debounce = window.setTimeout(send, 300)
+    const heartbeat = window.setInterval(send, 15_000)
+    return () => {
+      window.clearTimeout(debounce)
+      window.clearInterval(heartbeat)
+    }
+  }, [selectedSeatIds, gameId, user])
+  useEffect(
+    () => () => {
+      if (userRef.current) postSeatSelection(gameId, []).catch(() => undefined)
+    },
+    [gameId],
+  )
 
   const toggleSeat = (gameSeatId: number) => {
     setSelectedSeatIds((prev) => {
@@ -141,12 +174,13 @@ export function BookingSeatMapPage() {
         }
         grouped.set(item.sectionId, group)
       }
-      group.items.push(item)
+      // 다른 사용자가 고르는 좌석은 선점된 것처럼 보여 준다(클릭은 안 된다).
+      group.items.push(pickedByOthers.has(item.gameSeatId) && item.status === 'AVAILABLE' ? { ...item, status: 'HELD' } : item)
       priceByGameSeatId.set(item.gameSeatId, group.price)
       seatByGameSeatId.set(item.gameSeatId, item)
     }
     return { stadiumSections: [...grouped.values()], priceByGameSeatId, seatByGameSeatId }
-  }, [seatMapQuery.data, availabilityQuery.data])
+  }, [seatMapQuery.data, availabilityQuery.data, pickedByOthers])
 
   const estimatedTotal = [...selectedSeatIds].reduce((sum, id) => sum + (priceByGameSeatId.get(id) ?? 0), 0)
   // 고른 순서대로 보여준다. Set은 삽입 순서를 유지하므로 그대로 쓴다.
