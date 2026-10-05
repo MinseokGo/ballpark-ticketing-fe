@@ -75,6 +75,8 @@ export type LiveEventResponse = {
   playerName: string | null
   teamName: string | null
   detail: string | null
+  secondaryPlayerId: number | null
+  secondaryPlayerName: string | null
   createdAt: string
   terminal: boolean
 }

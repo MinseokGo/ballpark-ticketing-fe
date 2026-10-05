@@ -47,7 +47,7 @@ export function RecordsPage() {
         {games.map((game, index) => (
           <Link
             key={game.id}
-            to={`/games/${game.id}/live`}
+            to={`/games/${game.id}/record`}
             className="animate-fade-up press group relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-5 transition-all hover:-translate-y-1 hover:shadow-lg dark:border-slate-800 dark:bg-slate-900"
             style={{ animationDelay: `${Math.min(index, 8) * 60}ms` }}
           >
