@@ -172,24 +172,6 @@ function Panel({
   )
 }
 
-function QuickLink({ to, emoji, title, description }: { to: string; emoji: string; title: string; description: string }) {
-  return (
-    <Link
-      to={to}
-      className="press group flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 transition-all hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-700"
-    >
-      <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-2xl dark:bg-slate-800">
-        {emoji}
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="font-bold">{title}</p>
-        <p className="text-sm text-slate-500">{description}</p>
-      </div>
-      <span aria-hidden className="text-slate-400 transition-transform group-hover:translate-x-1">→</span>
-    </Link>
-  )
-}
-
 export function HomePage() {
   // 렌더 중 Date를 매번 새로 읽지 않도록 마운트 시점 한 번만 잡는다.
   const [now] = useState(() => new Date())
@@ -212,6 +194,9 @@ export function HomePage() {
   const live = upcoming.slice(0, 2)
   const myActive = entries.filter((entry) => entry.status !== 'CANCELLED')
 
+  // 결제가 끝나지 않은 예매는 가장 먼저 알려야 해서 맨 위 알림으로 올린다.
+  const pending = myActive.filter((entry) => entry.status === 'PENDING')
+
   return (
     <div className="space-y-8">
       <header className="animate-fade-up flex flex-wrap items-end justify-between gap-4">
@@ -222,17 +207,40 @@ export function HomePage() {
         <p className="tabular text-sm text-slate-500">{dateLabel(now.toISOString())}</p>
       </header>
 
-      {isPending && <Skeleton className="h-64" />}
-      {next && <NextGameHero game={next} now={now} />}
-      {data && !next && (
-        <p className="rounded-3xl border border-dashed border-slate-200 p-10 text-center text-sm text-slate-500 dark:border-slate-700">
-          곧 열리는 경기가 없어요. 새 일정이 올라오면 여기서 먼저 알려드릴게요.
-        </p>
+      {/* 자주 쓰는 동작은 헤더 바로 아래 한 줄에 둔다. */}
+      <nav className="animate-fade-up grid grid-cols-3 gap-2 [animation-delay:40ms] sm:flex sm:flex-wrap">
+        <ActionPill to="/booking" emoji="🎟️" label="예매하기" primary />
+        <ActionPill to="/schedule" emoji="📅" label="팀별 일정" />
+        <ActionPill to="/profile" emoji="🙋" label="마이페이지" />
+      </nav>
+
+      {pending.length > 0 && (
+        <Link
+          to={`/booking/${pending[0].gameId}`}
+          className="animate-fade-up press flex items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200"
+        >
+          <span className="flex items-center gap-3">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-amber-500 text-white">!</span>
+            <span className="font-semibold">
+              결제가 아직 끝나지 않은 예매가 {pending.length}건 있어요.
+            </span>
+          </span>
+          <span aria-hidden className="shrink-0 font-bold">결제하러 가기 →</span>
+        </Link>
       )}
 
-      {/* 1행: 지금 진행 중(넓게) + 이벤트 */}
+      {/* 1행: 다음 경기(넓게) + 지금 진행 중 */}
       <div className="grid gap-6 lg:grid-cols-3">
-        <Panel title="지금 진행 중" className="lg:col-span-2">
+        <div className="min-w-0 lg:col-span-2">
+          {isPending && <Skeleton className="h-72" />}
+          {next && <NextGameHero game={next} now={now} />}
+          {data && !next && (
+            <p className="rounded-3xl border border-dashed border-slate-200 p-10 text-center text-sm text-slate-500 dark:border-slate-700">
+              곧 열리는 경기가 없어요. 새 일정이 올라오면 여기서 먼저 알려드릴게요.
+            </p>
+          )}
+        </div>
+        <Panel title="지금 진행 중">
           {live.length > 0 ? (
             <LiveGames games={live} />
           ) : (
@@ -240,9 +248,6 @@ export function HomePage() {
               지금 중계 중인 경기가 없어요.
             </p>
           )}
-        </Panel>
-        <Panel title="이벤트">
-          <EventBanner />
         </Panel>
       </div>
 
@@ -299,11 +304,27 @@ export function HomePage() {
         </div>
       </Panel>
 
-      <section className="animate-fade-up grid gap-3 sm:grid-cols-3">
-        <QuickLink to="/booking" emoji="🎟️" title="예매하기" description="좌석 고르고 결제까지" />
-        <QuickLink to="/schedule" emoji="📅" title="팀별 일정" description="응원 팀 경기 보기" />
-        <QuickLink to="/profile" emoji="🙋" title="마이페이지" description="내 예매 확인하기" />
-      </section>
+      {/* 4행: 이벤트는 가로로 넓게 */}
+      <Panel title="이벤트">
+        <EventBanner />
+      </Panel>
     </div>
+  )
+}
+
+function ActionPill({ to, emoji, label, primary = false }: { to: string; emoji: string; label: string; primary?: boolean }) {
+  return (
+    <Link
+      to={to}
+      className={[
+        'press flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold transition-colors sm:justify-start',
+        primary
+          ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/30 hover:bg-blue-700'
+          : 'border border-slate-200 bg-white hover:border-blue-300 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-700',
+      ].join(' ')}
+    >
+      <span aria-hidden>{emoji}</span>
+      {label}
+    </Link>
   )
 }
