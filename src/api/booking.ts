@@ -1,6 +1,7 @@
 import { apiGet, apiPost } from './client'
 import type {
   ChatMessageResponse,
+  LiveEventResponse,
   GameProgress,
   GameResponse,
   LiveStateResponse,
@@ -37,6 +38,11 @@ export function postChatMessage(gameId: number, userId: number, content: string)
     { content },
     { 'X-User-Id': String(userId) },
   )
+}
+
+/** 경기 기록 전체(번호 순). 끝난 경기의 플레이 기록을 보여준다. */
+export function getGameEvents(gameId: number): Promise<LiveEventResponse[]> {
+  return apiGet<LiveEventResponse[]>(`/api/games/${gameId}/live/events`)
 }
 
 export function getLiveState(gameId: number): Promise<LiveStateResponse> {
