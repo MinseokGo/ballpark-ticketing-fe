@@ -1,6 +1,7 @@
 import { apiGet, apiPost } from './client'
 import type {
   GameResponse,
+  LiveStateResponse,
   GameSummaryResponse,
   PageResponse,
   PaymentCreateRequest,
@@ -17,6 +18,10 @@ export function listGames(page: number, size: number): Promise<PageResponse<Game
 
 export function getGame(gameId: number): Promise<GameResponse> {
   return apiGet<GameResponse>(`/api/games/${gameId}`)
+}
+
+export function getLiveState(gameId: number): Promise<LiveStateResponse> {
+  return apiGet<LiveStateResponse>(`/api/games/${gameId}/live`)
 }
 
 export function getSeatMap(gameId: number): Promise<SeatMapItemResponse[]> {

@@ -38,6 +38,40 @@ export type GameResponse = {
   ticketOpenAt: string
   status: GameStatus
   gameSeatCount: number
+  progress: GameProgress
+  homeScore: number
+  awayScore: number
+  winner: Winner | null
+}
+
+/** 경기 진행 상태. 예매 상태(GameStatus)와 따로 간다. */
+export type GameProgress = 'NOT_STARTED' | 'LIVE' | 'FINISHED' | 'CANCELLED'
+
+export type Winner = 'HOME' | 'AWAY' | 'DRAW'
+
+export type HalfInning = 'TOP' | 'BOTTOM'
+
+/** 현재 진행 상태 스냅샷. seq는 마지막 이벤트 번호다. */
+export type LiveStateResponse = {
+  gameId: number
+  progress: GameProgress
+  inning: number | null
+  half: HalfInning | null
+  homeScore: number
+  awayScore: number
+  seq: number
+}
+
+/** SSE로 오는 이벤트 한 건. 점수와 이닝은 절대값이라 같은 이벤트를 두 번 받아도 괜찮다. */
+export type LiveEventResponse = {
+  gameId: number
+  seq: number
+  type: string
+  inning: number | null
+  half: HalfInning | null
+  homeScore: number
+  awayScore: number
+  terminal: boolean
 }
 
 export type PageResponse<T> = {
@@ -54,6 +88,10 @@ export type GameSummaryResponse = {
   awayTeam: string
   startAt: string
   status: GameStatus
+  progress: GameProgress
+  homeScore: number
+  awayScore: number
+  winner: Winner | null
 }
 
 export type SeatMapItemResponse = {

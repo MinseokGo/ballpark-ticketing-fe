@@ -7,6 +7,7 @@ import type { GameSummaryResponse } from '../api/types'
 import { ErrorBanner } from '../components/Banner'
 import { Skeleton } from '../components/Skeleton'
 import { useBookingHistory, type BookingHistoryEntry } from '../hooks/useBookingHistory'
+import { winnerLabel } from '../lib/gameResult'
 import { teamColor, teamInitial } from '../lib/teamColors'
 import { formatKst, parseServerTime } from '../lib/serverTime'
 
@@ -231,6 +232,14 @@ function ReservationCard({
           <p className="tabular mt-0.5 text-sm text-slate-500">
             {game ? dateTimeLabel(game.startAt) : '경기 일정을 찾을 수 없어요'}
           </p>
+          {game?.progress === 'FINISHED' && (
+            <p className="tabular mt-2 text-sm font-semibold">
+              최종 {game.homeScore} : {game.awayScore}
+              {game.winner && (
+                <span className="ml-2 text-slate-500">{winnerLabel(game.winner, game.homeTeam, game.awayTeam)}</span>
+              )}
+            </p>
+          )}
         </div>
       </div>
 

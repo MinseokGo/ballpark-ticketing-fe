@@ -123,7 +123,7 @@ export function TeamSchedulePage() {
             ) : (
               <div className="grid gap-3 md:grid-cols-2">
                 {schedule.map((game) => (
-                  <GameTile key={game.id} game={game} now={now} />
+                  <GameTile key={game.id} game={game} now={now} perspective={team} />
                 ))}
               </div>
             )}

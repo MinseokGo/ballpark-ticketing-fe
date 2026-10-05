@@ -189,8 +189,13 @@ export function HomePage() {
   const todays = games
     .filter((game) => sameDay(parseServerTime(game.startAt), now))
     .sort((a, b) => a.startAt.localeCompare(b.startAt))
-  // 진행 중인 경기: 예정 경기 중 가장 가까운 2경기를 지금 중계 중인 것으로 취급한다(시뮬레이션).
-  const live = upcoming.slice(0, 2)
+  // 진행 중인 경기는 서버 진행 상태(progress)로 고른다.
+  const live = games.filter((game) => game.progress === 'LIVE')
+  // 최근 결과: 끝난 경기를 최근 순으로 3개.
+  const recentResults = games
+    .filter((game) => game.progress === 'FINISHED')
+    .sort((a, b) => b.startAt.localeCompare(a.startAt))
+    .slice(0, 3)
   const myActive = entries.filter((entry) => entry.status !== 'CANCELLED')
 
   // 결제가 끝나지 않은 예매는 가장 먼저 알려야 해서 맨 위 알림으로 올린다.
@@ -286,6 +291,16 @@ export function HomePage() {
           )}
         </Panel>
       </div>
+
+      {recentResults.length > 0 && (
+        <Panel title="최근 결과">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {recentResults.map((game) => (
+              <GameTile key={game.id} game={game} now={now} />
+            ))}
+          </div>
+        </Panel>
+      )}
 
       {/* 3행: 다가오는 경기 전체 */}
       <Panel title="다가오는 경기" action={{ to: '/booking', label: '전체 보기' }}>
