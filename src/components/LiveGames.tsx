@@ -19,7 +19,7 @@ export function LiveGames({ games }: { games: GameSummaryResponse[] }) {
   if (games.length === 0) return null
 
   return (
-    <div className="grid gap-3">
+    <div className="grid gap-3 sm:grid-cols-2">
       {games.map((game) => (
         <LiveCard key={game.id} game={game} live={simulateLive(game.id, now)} />
       ))}

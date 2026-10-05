@@ -5,6 +5,16 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Ballpark Admin</title>
+    <script>
+      // 첫 페인트 전에 테마 클래스를 붙여서 밝은 화면이 잠깐 비치는 깜빡임을 막는다.
+      (function () {
+        try {
+          var saved = localStorage.getItem('ballpark-booking.theme');
+          var dark = saved === 'dark' || ((saved !== 'light') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (dark) document.documentElement.classList.add('dark');
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

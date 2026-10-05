@@ -1,4 +1,5 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { useTheme, type ThemeChoice } from '../hooks/useTheme'
 
 const NAV_ITEMS = [
   { to: '/', label: '홈', icon: '🏠' },
@@ -22,8 +23,21 @@ function tabClassName({ isActive }: { isActive: boolean }) {
   ].join(' ')
 }
 
+const THEME_LABEL: Record<ThemeChoice, string> = {
+  system: '시스템 설정',
+  light: '라이트',
+  dark: '다크',
+}
+
+const THEME_ICON: Record<ThemeChoice, string> = {
+  system: '🖥️',
+  light: '☀️',
+  dark: '🌙',
+}
+
 export function Layout() {
   const { pathname, key } = useLocation()
+  const { theme, cycle } = useTheme()
   // 좌석 지도 화면은 하단에 예매·결제 바가 떠 있어서 탭 바와 겹치지 않게 숨긴다.
   const onSeatMap = /^\/booking\/\d+/.test(pathname)
   // 헤더는 항상 화면 전체 폭을 쓴다. 본문은 글 위주 화면만 읽기 폭으로 제한하고, 좌석 지도는 전체를 쓴다.
@@ -39,19 +53,30 @@ export function Layout() {
             <span className="inline-block transition-transform duration-500 hover:rotate-45">⚾</span>
             <span>야구장</span>
           </NavLink>
-          <nav className="hidden items-center gap-1 sm:flex">
-            {NAV_ITEMS.map((item) => (
-              <NavLink key={item.to} to={item.to} className={navLinkClassName} end>
-                {item.label}
+          <div className="flex items-center gap-1">
+            <nav className="hidden items-center gap-1 sm:flex">
+              {NAV_ITEMS.map((item) => (
+                <NavLink key={item.to} to={item.to} className={navLinkClassName} end>
+                  {item.label}
+                </NavLink>
+              ))}
+              <NavLink
+                to="/admin"
+                className="press ml-1 rounded-full px-3 py-2 text-xs font-medium text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+              >
+                관리자
               </NavLink>
-            ))}
-            <NavLink
-              to="/admin"
-              className="press ml-1 rounded-full px-3 py-2 text-xs font-medium text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+            </nav>
+            <button
+              type="button"
+              onClick={cycle}
+              aria-label={`테마: ${THEME_LABEL[theme]} (눌러서 바꾸기)`}
+              title={`테마: ${THEME_LABEL[theme]}`}
+              className="press flex size-9 items-center justify-center rounded-full text-base hover:bg-slate-100 dark:hover:bg-slate-800"
             >
-              관리자
-            </NavLink>
-          </nav>
+              <span aria-hidden>{THEME_ICON[theme]}</span>
+            </button>
+          </div>
         </div>
       </header>
 

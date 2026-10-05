@@ -88,8 +88,9 @@ src
 - 에러는 `ApiError`(`problem: ProblemDetail`)로 받는다. 화면(`ErrorBanner`)에는 `problem.detail`과
   `problem.errors`(필드별 사유)만 보여준다 — 백엔드 에러 메시지를 프론트에서 새로 쓰지는 않지만,
   `problem.code`(`SEAT-002` 같은 내부 코드)는 실제 서비스라면 사용자에게 보일 이유가 없어 띄우지 않는다.
-- 스타일은 Tailwind 유틸리티 클래스로 한다. 다크 모드는 `dark:` variant로 같이 처리한다(별도 다크모드
-  토글은 두지 않는다. 시스템 설정을 따른다).
+- 스타일은 Tailwind 유틸리티 클래스로 한다. 다크 모드는 `dark:` variant로 같이 처리한다. 테마는 `시스템 → 라이트 → 다크`
+  순서로 헤더 버튼에서 바꾸고, 선택은 `localStorage`(`ballpark-booking.theme`)에 남긴다. `dark:` variant는
+  `index.css`의 `@custom-variant dark`로 `html.dark` 클래스 기준이다(시스템 설정만 보지 않는다).
 - 주석은 "왜"가 필요한 곳에만, 한국어로.
 
 ## 디자인

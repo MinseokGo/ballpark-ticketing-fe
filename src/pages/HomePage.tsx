@@ -222,76 +222,82 @@ export function HomePage() {
         <p className="tabular text-sm text-slate-500">{dateLabel(now.toISOString())}</p>
       </header>
 
+      {isPending && <Skeleton className="h-64" />}
+      {next && <NextGameHero game={next} now={now} />}
+      {data && !next && (
+        <p className="rounded-3xl border border-dashed border-slate-200 p-10 text-center text-sm text-slate-500 dark:border-slate-700">
+          곧 열리는 경기가 없어요. 새 일정이 올라오면 여기서 먼저 알려드릴게요.
+        </p>
+      )}
+
+      {/* 1행: 지금 진행 중(넓게) + 이벤트 */}
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="min-w-0 space-y-6 lg:col-span-2">
-          {isPending && <Skeleton className="h-64" />}
-          {next && <NextGameHero game={next} now={now} />}
-          {data && !next && (
-            <p className="rounded-3xl border border-dashed border-slate-200 p-10 text-center text-sm text-slate-500 dark:border-slate-700">
-              곧 열리는 경기가 없어요. 새 일정이 올라오면 여기서 먼저 알려드릴게요.
+        <Panel title="지금 진행 중" className="lg:col-span-2">
+          {live.length > 0 ? (
+            <LiveGames games={live} />
+          ) : (
+            <p className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500 dark:border-slate-700">
+              지금 중계 중인 경기가 없어요.
             </p>
           )}
+        </Panel>
+        <Panel title="이벤트">
+          <EventBanner />
+        </Panel>
+      </div>
 
-          <Panel
-            title="내 예매"
-            action={myActive.length > 0 ? { to: '/profile', label: '전체 보기' } : undefined}
-          >
-            {myActive.length === 0 ? (
-              <Link
-                to="/booking"
-                className="flex items-center justify-between rounded-2xl border border-dashed border-slate-200 p-6 text-sm text-slate-500 transition-colors hover:border-blue-300 hover:text-blue-600 dark:border-slate-700"
-              >
-                <span>아직 예매한 경기가 없어요. 좌석을 골라 첫 예매를 해 보세요.</span>
-                <span aria-hidden>→</span>
-              </Link>
-            ) : (
-              <div className="grid gap-3 sm:grid-cols-2">
-                {myActive.map((entry) => (
-                  <MyReservationCard key={entry.reservationId} entry={entry} game={byId.get(entry.gameId)} />
-                ))}
-              </div>
-            )}
-          </Panel>
-
-          <Panel title="다가오는 경기" action={{ to: '/booking', label: '전체 보기' }}>
-            {isPending && <SkeletonList count={3} />}
-            {data && upcoming.length === 0 && (
-              <p className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500 dark:border-slate-700">
-                아직 열린 경기가 없어요.
-              </p>
-            )}
+      {/* 2행: 내 예매(넓게) + 오늘의 경기 */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Panel
+          title="내 예매"
+          className="lg:col-span-2"
+          action={myActive.length > 0 ? { to: '/profile', label: '전체 보기' } : undefined}
+        >
+          {myActive.length === 0 ? (
+            <Link
+              to="/booking"
+              className="flex items-center justify-between rounded-2xl border border-dashed border-slate-200 p-6 text-sm text-slate-500 transition-colors hover:border-blue-300 hover:text-blue-600 dark:border-slate-700"
+            >
+              <span>아직 예매한 경기가 없어요. 좌석을 골라 첫 예매를 해 보세요.</span>
+              <span aria-hidden>→</span>
+            </Link>
+          ) : (
             <div className="grid gap-3 sm:grid-cols-2">
-              {upcoming.slice(0, 6).map((game, index) => (
-                <div key={game.id} className="animate-fade-up" style={{ animationDelay: `${index * 50}ms` }}>
-                  <GameTile game={game} now={now} />
-                </div>
+              {myActive.map((entry) => (
+                <MyReservationCard key={entry.reservationId} entry={entry} game={byId.get(entry.gameId)} />
               ))}
             </div>
-          </Panel>
-        </div>
-
-        <aside className="min-w-0 space-y-6">
-          {live.length > 0 && (
-            <Panel title="지금 진행 중">
-              <LiveGames games={live} />
-            </Panel>
           )}
-
-          <Panel title="오늘의 경기" action={{ to: '/schedule', label: '일정' }}>
-            {todays.length === 0 ? (
-              <p className="rounded-2xl bg-white p-5 text-sm text-slate-500 dark:bg-slate-900">오늘은 예정된 경기가 없어요.</p>
-            ) : (
-              <div className="grid gap-2">
-                {todays.map((game) => (
-                  <GameTile key={game.id} game={game} now={now} />
-                ))}
-              </div>
-            )}
-          </Panel>
-
-          <EventBanner />
-        </aside>
+        </Panel>
+        <Panel title="오늘의 경기" action={{ to: '/schedule', label: '일정' }}>
+          {todays.length === 0 ? (
+            <p className="rounded-2xl bg-white p-5 text-sm text-slate-500 dark:bg-slate-900">오늘은 예정된 경기가 없어요.</p>
+          ) : (
+            <div className="grid gap-2">
+              {todays.map((game) => (
+                <GameTile key={game.id} game={game} now={now} />
+              ))}
+            </div>
+          )}
+        </Panel>
       </div>
+
+      {/* 3행: 다가오는 경기 전체 */}
+      <Panel title="다가오는 경기" action={{ to: '/booking', label: '전체 보기' }}>
+        {isPending && <SkeletonList count={3} />}
+        {data && upcoming.length === 0 && (
+          <p className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500 dark:border-slate-700">
+            아직 열린 경기가 없어요.
+          </p>
+        )}
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {upcoming.slice(0, 6).map((game, index) => (
+            <div key={game.id} className="animate-fade-up" style={{ animationDelay: `${index * 50}ms` }}>
+              <GameTile game={game} now={now} />
+            </div>
+          ))}
+        </div>
+      </Panel>
 
       <section className="animate-fade-up grid gap-3 sm:grid-cols-3">
         <QuickLink to="/booking" emoji="🎟️" title="예매하기" description="좌석 고르고 결제까지" />

@@ -1,7 +1,14 @@
 @import "tailwindcss";
 
+/* 다크 모드는 html 요소의 .dark 클래스로 켠다(useTheme). 시스템 설정은 useTheme이 클래스로 반영한다. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
+}
+
+:root.dark {
+  color-scheme: dark;
 }
 
 body {
@@ -93,11 +100,9 @@ body {
   animation: shimmer 1.4s infinite linear;
 }
 
-@media (prefers-color-scheme: dark) {
-  .skeleton {
-    background: linear-gradient(90deg, #1e293b 25%, #334155 37%, #1e293b 63%);
-    background-size: 400px 100%;
-  }
+.dark .skeleton {
+  background: linear-gradient(90deg, #1e293b 25%, #334155 37%, #1e293b 63%);
+  background-size: 400px 100%;
 }
 
 /* 버튼을 누르는 순간 살짝 줄어드는 피드백 — 네이티브 앱 느낌. */
