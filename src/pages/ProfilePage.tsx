@@ -166,9 +166,9 @@ export function ProfilePage() {
               이 상태의 예매가 없어요.
             </p>
           ) : (
-            <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+            <div className="depth-stage grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
               {visible.map((entry, index) => (
-                <div key={entry.reservationId} className="animate-fade-up" style={{ animationDelay: `${Math.min(index, 8) * 40}ms` }}>
+                <div key={entry.reservationId} className="animate-rise" style={{ animationDelay: `${Math.min(index, 8) * 70}ms` }}>
                   <ReservationCard
                     entry={entry}
                     game={gameById.get(entry.gameId)}

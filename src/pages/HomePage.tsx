@@ -296,9 +296,11 @@ export function HomePage() {
 
       {recentResults.length > 0 && (
         <Panel title="최근 결과">
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {recentResults.map((game) => (
-              <GameTile key={game.id} game={game} now={now} />
+          <div className="depth-stage grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {recentResults.map((game, index) => (
+              <div key={game.id} className="animate-rise" style={{ animationDelay: `${index * 90}ms` }}>
+                <GameTile game={game} now={now} />
+              </div>
             ))}
           </div>
         </Panel>
@@ -314,7 +316,7 @@ export function HomePage() {
         )}
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {upcoming.slice(0, 6).map((game, index) => (
-            <div key={game.id} className="animate-fade-up" style={{ animationDelay: `${index * 50}ms` }}>
+            <div key={game.id} className="animate-rise" style={{ animationDelay: `${index * 90}ms` }}>
               <GameTile game={game} now={now} />
             </div>
           ))}
@@ -344,7 +346,7 @@ function ActionPill({ to, emoji, label, primary = false }: { to: string; emoji: 
     <Link
       to={to}
       className={[
-        'press flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-colors',
+        'press flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-all hover:-translate-y-0.5',
         primary
           ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/30 hover:bg-blue-700'
           : 'border border-slate-200 bg-white hover:border-blue-300 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-700',

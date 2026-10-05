@@ -86,7 +86,7 @@ export function LiveTimeline({ events, team }: { events: LiveEventResponse[]; te
 
   const groups = groupEvents(events)
   return (
-    <div className="space-y-5">
+    <div className="depth-stage space-y-5">
       {groups.map((group) => (
         <section key={group.key} aria-label={group.label}>
           <div className="mb-2 flex items-center gap-2">
@@ -101,7 +101,7 @@ export function LiveTimeline({ events, team }: { events: LiveEventResponse[]; te
               return (
                 <li
                   key={event.seq}
-                  className="animate-fade-up relative flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 pr-4 dark:border-slate-800 dark:bg-slate-900"
+                  className="animate-rise relative flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 pr-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
                 >
                   <span
                     className={`absolute -left-6 top-1/2 flex size-[18px] -translate-y-1/2 items-center justify-center rounded-full ring-4 ${tone.ring} bg-white dark:bg-slate-950`}

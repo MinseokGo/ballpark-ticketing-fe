@@ -10,9 +10,11 @@ const POLL_MS = 15_000
 export function LiveGames({ games }: { games: GameSummaryResponse[] }) {
   if (games.length === 0) return null
   return (
-    <div className="grid gap-3">
-      {games.map((game) => (
-        <LiveCard key={game.id} game={game} />
+    <div className="depth-stage grid gap-3">
+      {games.map((game, index) => (
+        <div key={game.id} className="animate-rise" style={{ animationDelay: `${index * 140}ms` }}>
+          <LiveCard game={game} />
+        </div>
       ))}
     </div>
   )
