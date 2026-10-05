@@ -8,13 +8,17 @@ export type HomeWidgetId = (typeof HOME_WIDGET_IDS)[number]
 export type WidgetItem = { id: HomeWidgetId; w: number; h: number }
 export type PlacedWidget = WidgetItem & { col: number; row: number }
 
+/**
+ * 기본 배치. 한 칸은 96px이고 칸 사이는 24px이다. 내용 높이에 맞춰서 빈 공간이 적게 잡았다.
+ * 0행~2행: 다음 경기(3×3) + 지금 진행 중(2×3) / 3행~4행: 내 예매(3×2) + 오늘의 경기(2×2)
+ */
 export const DEFAULT_ITEMS: WidgetItem[] = [
   { id: 'hero', w: 3, h: 3 },
   { id: 'live', w: 2, h: 3 },
-  { id: 'reservations', w: 3, h: 3 },
-  { id: 'today', w: 2, h: 3 },
+  { id: 'reservations', w: 3, h: 2 },
+  { id: 'today', w: 2, h: 2 },
   { id: 'recent', w: 5, h: 3 },
-  { id: 'upcoming', w: 5, h: 4 },
+  { id: 'upcoming', w: 5, h: 3 },
   { id: 'events', w: 5, h: 2 },
 ]
 
