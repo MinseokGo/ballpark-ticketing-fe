@@ -12,6 +12,7 @@ import { useBookingHistory, type BookingHistoryEntry } from '../hooks/useBooking
 import { useHomeLayout } from '../hooks/useHomeLayout'
 import { packLayout, type HomeWidgetId } from '../lib/homeGrid'
 import { HomeLayoutEditor } from '../components/HomeLayoutEditor'
+import { gameHref } from '../lib/gameRoutes'
 import { teamColor, teamInitial } from '../lib/teamColors'
 import { formatKst, kstDateKey, parseServerTime } from '../lib/serverTime'
 
@@ -48,7 +49,7 @@ function NextGameHero({ game, now }: { game: GameSummaryResponse; now: Date }) {
   const open = game.status === 'OPEN'
   return (
     <Link
-      to={open ? `/booking/${game.id}` : '/schedule'}
+      to={gameHref(game) ?? '/schedule'}
       className="press group relative block h-full overflow-hidden rounded-3xl p-6 text-white shadow-lg shadow-slate-900/10 sm:p-8"
       style={{
         backgroundImage: `linear-gradient(135deg, ${teamColor(game.homeTeam)}, ${teamColor(game.awayTeam)})`,
@@ -103,9 +104,10 @@ function NextGameHero({ game, now }: { game: GameSummaryResponse; now: Date }) {
 /** 이 브라우저에서 한 예매. 서버 최신 상태와 다를 수 있어서 이 기기 기록이라는 점은 마이페이지에서 설명한다. */
 function MyReservationCard({ entry, game }: { entry: BookingHistoryEntry; game?: GameSummaryResponse }) {
   const confirmed = entry.status === 'CONFIRMED'
+  const href = (game && gameHref(game)) ?? `/booking/${entry.gameId}`
   return (
     <Link
-      to={`/booking/${entry.gameId}`}
+      to={href}
       className="press group flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 transition-all hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-700"
     >
       <div className="flex items-center justify-between">

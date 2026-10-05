@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import type { GameStatus, GameSummaryResponse } from '../api/types'
+import { gameHref } from '../lib/gameRoutes'
 import { resultFor, winnerLabel } from '../lib/gameResult'
 import { teamColor, teamInitial } from '../lib/teamColors'
 import { formatKst, kstDateKey, kstDay, parseServerTime } from '../lib/serverTime'
@@ -108,12 +109,13 @@ export function GameTile({
   const shell =
     'group block rounded-2xl border border-slate-200 bg-white transition-all dark:border-slate-800 dark:bg-slate-900'
 
-  if (!open) {
+  const href = gameHref(game)
+  if (!href) {
     return <div className={`${shell} opacity-70`}>{body}</div>
   }
   return (
     <Link
-      to={`/booking/${game.id}`}
+      to={href}
       className={`${shell} press hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md dark:hover:border-blue-700`}
     >
       {body}
