@@ -21,6 +21,7 @@ export function BookingGamesPage() {
   const { data, isPending, isError } = useQuery({
     queryKey: ['games', 0, 50],
     queryFn: () => listGames(0, 50),
+    refetchInterval: 15_000,
   })
 
   const games = (data?.content ?? [])
@@ -70,9 +71,9 @@ export function BookingGamesPage() {
         </p>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="depth-stage grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {games.map((game, index) => (
-          <div key={game.id} className="animate-fade-up" style={{ animationDelay: `${Math.min(index, 8) * 40}ms` }}>
+          <div key={game.id} className="animate-rise" style={{ animationDelay: `${Math.min(index, 8) * 70}ms` }}>
             <GameTile game={game} now={now} />
           </div>
         ))}

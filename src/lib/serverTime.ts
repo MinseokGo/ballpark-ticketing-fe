@@ -5,8 +5,10 @@
 const KST = 'Asia/Seoul'
 
 export function parseServerTime(value: string): Date {
-  const hasOffset = /(Z|[+-]\d{2}:?\d{2})$/.test(value)
-  return new Date(hasOffset ? value : `${value}+09:00`)
+  // 백엔드 LocalDateTime은 마이크로초(6자리)까지 나온다. 브라우저 Date는 밀리초(3자리)만 확실히 읽으므로 자른다.
+  const trimmed = value.replace(/(\.\d{3})\d+/, '$1')
+  const hasOffset = /(Z|[+-]\d{2}:?\d{2})$/.test(trimmed)
+  return new Date(hasOffset ? trimmed : `${trimmed}+09:00`)
 }
 
 function toDate(value: string | Date): Date {

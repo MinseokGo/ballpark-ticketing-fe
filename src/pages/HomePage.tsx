@@ -178,19 +178,28 @@ export function HomePage() {
   const { data, isPending } = useQuery({
     queryKey: ['games', 0, GAME_LIMIT],
     queryFn: () => listGames(0, GAME_LIMIT),
+    // 경기가 진행 중으로 바뀌거나 끝나는 것을 페이지를 새로 열지 않고도 보이도록 주기적으로 받는다.
+    refetchInterval: 15_000,
   })
 
   const games = data?.content ?? []
   const byId = new Map(games.map((game) => [game.id, game] as const))
+  // 끝났거나 취소된 경기는 다음 경기가 아니다.
   const upcoming = games
+    .filter((game) => game.progress !== 'FINISHED' && game.progress !== 'CANCELLED')
     .filter((game) => parseServerTime(game.startAt) >= now || sameDay(parseServerTime(game.startAt), now))
     .sort((a, b) => a.startAt.localeCompare(b.startAt))
   const next = upcoming[0]
   const todays = games
     .filter((game) => sameDay(parseServerTime(game.startAt), now))
     .sort((a, b) => a.startAt.localeCompare(b.startAt))
-  // 진행 중인 경기: 예정 경기 중 가장 가까운 2경기를 지금 중계 중인 것으로 취급한다(시뮬레이션).
-  const live = upcoming.slice(0, 2)
+  // 진행 중인 경기는 서버 진행 상태(progress)로 고른다.
+  const live = games.filter((game) => game.progress === 'LIVE')
+  // 최근 결과: 끝난 경기를 최근 순으로 3개.
+  const recentResults = games
+    .filter((game) => game.progress === 'FINISHED')
+    .sort((a, b) => b.startAt.localeCompare(a.startAt))
+    .slice(0, 3)
   const myActive = entries.filter((entry) => entry.status !== 'CANCELLED')
 
   // 결제가 끝나지 않은 예매는 가장 먼저 알려야 해서 맨 위 알림으로 올린다.
@@ -287,6 +296,18 @@ export function HomePage() {
         </Panel>
       </div>
 
+      {recentResults.length > 0 && (
+        <Panel title="최근 결과">
+          <div className="depth-stage grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {recentResults.map((game, index) => (
+              <div key={game.id} className="animate-rise" style={{ animationDelay: `${index * 90}ms` }}>
+                <GameTile game={game} now={now} />
+              </div>
+            ))}
+          </div>
+        </Panel>
+      )}
+
       {/* 3행: 다가오는 경기 전체 */}
       <Panel title="다가오는 경기" action={{ to: '/booking', label: '전체 보기' }}>
         {isPending && <SkeletonList count={3} />}
@@ -297,7 +318,7 @@ export function HomePage() {
         )}
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {upcoming.slice(0, 6).map((game, index) => (
-            <div key={game.id} className="animate-fade-up" style={{ animationDelay: `${index * 50}ms` }}>
+            <div key={game.id} className="animate-rise" style={{ animationDelay: `${index * 90}ms` }}>
               <GameTile game={game} now={now} />
             </div>
           ))}
@@ -327,7 +348,7 @@ function ActionPill({ to, emoji, label, primary = false }: { to: string; emoji: 
     <Link
       to={to}
       className={[
-        'press flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-colors',
+        'press flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-all hover:-translate-y-0.5',
         primary
           ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/30 hover:bg-blue-700'
           : 'border border-slate-200 bg-white hover:border-blue-300 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-700',

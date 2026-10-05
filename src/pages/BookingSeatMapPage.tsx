@@ -15,9 +15,11 @@ import { Celebration } from '../components/Celebration'
 import { Skeleton } from '../components/Skeleton'
 import { StadiumMap, type StadiumSectionSeats } from '../components/StadiumMap'
 import { SeatStatusLegend } from '../components/SeatStatusLegend'
+import { GameScoreBanner } from '../components/GameScoreBanner'
 import { SelectedSeatsBar, type SelectedSeat } from '../components/SelectedSeatsBar'
 import { ZoneLegend } from '../components/ZoneLegend'
 import { useBookingHistory } from '../hooks/useBookingHistory'
+import { useLiveBroadcast, useLiveState } from '../hooks/useLiveGame'
 import { CURRENT_USER_ID } from '../constants'
 import { teamColor } from '../lib/teamColors'
 import type { ReservationResponse, SeatMapItemResponse } from '../api/types'
@@ -42,6 +44,9 @@ export function BookingSeatMapPage() {
 
   const gameQuery = useQuery({ queryKey: ['game', gameId], queryFn: () => getGame(gameId) })
   const seatMapQuery = useQuery({ queryKey: ['seatMap', gameId], queryFn: () => getSeatMap(gameId) })
+  // 진행 상태는 10초 폴링으로 받고, 경기가 진행 중이면 SSE로 즉시 갱신한다. SSE가 끊기면 폴링이 값을 맞춘다.
+  const liveQuery = useLiveState(gameId, 10_000)
+  const streaming = useLiveBroadcast(gameId, liveQuery.data?.progress === 'LIVE').connected
   const availabilityQuery = useQuery({
     queryKey: ['sectionAvailability', gameId],
     queryFn: () => getSectionAvailability(gameId),
@@ -190,6 +195,8 @@ export function BookingSeatMapPage() {
           <p className="text-sm text-white/80">불러오는 중...</p>
         )}
       </div>
+
+      {game && <GameScoreBanner game={game} live={liveQuery.data} streaming={streaming} />}
 
       <div className="space-y-6 lg:grid lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start lg:gap-6 lg:space-y-0">
         {stadiumSections.length > 0 && (

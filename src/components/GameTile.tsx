@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import type { GameStatus, GameSummaryResponse } from '../api/types'
+import { resultFor, winnerLabel } from '../lib/gameResult'
 import { teamColor, teamInitial } from '../lib/teamColors'
 import { formatKst, kstDateKey, kstDay, parseServerTime } from '../lib/serverTime'
 
@@ -29,7 +30,18 @@ function sameDay(a: Date, b: Date) {
  * 경기 한 줄을 날짜 블록·팀 배지·예매 상태로 보여주는 카드. 예매 중인 경기만 누를 수 있다.
  * 오늘 경기는 "오늘" 표시를 붙인다.
  */
-export function GameTile({ game, now }: { game: GameSummaryResponse; now: Date }) {
+/**
+ * perspective를 주면 그 팀 기준으로 승·패·무를 보여준다(팀별 일정). 없으면 승부 팀을 보여준다.
+ */
+export function GameTile({
+  game,
+  now,
+  perspective,
+}: {
+  game: GameSummaryResponse
+  now: Date
+  perspective?: string
+}) {
   const start = parseServerTime(game.startAt)
   const today = sameDay(start, now)
   const open = game.status === 'OPEN'
@@ -66,10 +78,24 @@ export function GameTile({ game, now }: { game: GameSummaryResponse; now: Date }
       </div>
 
       <div className="flex shrink-0 flex-col items-end gap-2">
-        <span className={`flex items-center gap-1.5 text-xs font-semibold ${STATUS_TEXT[game.status]}`}>
-          <span className={`size-1.5 rounded-full ${STATUS_DOT[game.status]}`} />
-          {STATUS_LABEL[game.status] ?? game.status}
-        </span>
+        {game.progress === 'LIVE' ? (
+          <span className="flex items-center gap-1.5 rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-bold text-red-600 dark:bg-red-950 dark:text-red-400">
+            <span className="size-1.5 rounded-full bg-red-500" />
+            LIVE {game.homeScore} : {game.awayScore}
+          </span>
+        ) : game.progress === 'FINISHED' ? (
+          <div className="flex flex-col items-end gap-1">
+            <span className="tabular text-sm font-extrabold">
+              {game.homeScore} : {game.awayScore}
+            </span>
+            <ResultChip game={game} perspective={perspective} />
+          </div>
+        ) : (
+          <span className={`flex items-center gap-1.5 text-xs font-semibold ${STATUS_TEXT[game.status]}`}>
+            <span className={`size-1.5 rounded-full ${STATUS_DOT[game.status]}`} />
+            {STATUS_LABEL[game.status] ?? game.status}
+          </span>
+        )}
         {open && (
           <span aria-hidden className="text-blue-600 transition-transform group-hover:translate-x-1 dark:text-blue-400">
             →
@@ -93,6 +119,21 @@ export function GameTile({ game, now }: { game: GameSummaryResponse; now: Date }
       {body}
     </Link>
   )
+}
+
+function ResultChip({ game, perspective }: { game: GameSummaryResponse; perspective?: string }) {
+  if (perspective) {
+    const result = resultFor(perspective, game)
+    if (!result) return null
+    const tone =
+      result === '승'
+        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+        : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+    return <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${tone}`}>{result}</span>
+  }
+  const label = winnerLabel(game.winner, game.homeTeam, game.awayTeam)
+  if (!label) return null
+  return <span className="text-[11px] font-semibold text-slate-500">{label}</span>
 }
 
 function TeamChip({ team }: { team: string }) {

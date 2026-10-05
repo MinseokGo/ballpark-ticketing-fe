@@ -7,6 +7,7 @@ import type { GameSummaryResponse } from '../api/types'
 import { ErrorBanner } from '../components/Banner'
 import { Skeleton } from '../components/Skeleton'
 import { useBookingHistory, type BookingHistoryEntry } from '../hooks/useBookingHistory'
+import { winnerLabel } from '../lib/gameResult'
 import { teamColor, teamInitial } from '../lib/teamColors'
 import { formatKst, parseServerTime } from '../lib/serverTime'
 
@@ -165,9 +166,9 @@ export function ProfilePage() {
               이 상태의 예매가 없어요.
             </p>
           ) : (
-            <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+            <div className="depth-stage grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
               {visible.map((entry, index) => (
-                <div key={entry.reservationId} className="animate-fade-up" style={{ animationDelay: `${Math.min(index, 8) * 40}ms` }}>
+                <div key={entry.reservationId} className="animate-rise" style={{ animationDelay: `${Math.min(index, 8) * 70}ms` }}>
                   <ReservationCard
                     entry={entry}
                     game={gameById.get(entry.gameId)}
@@ -231,6 +232,14 @@ function ReservationCard({
           <p className="tabular mt-0.5 text-sm text-slate-500">
             {game ? dateTimeLabel(game.startAt) : '경기 일정을 찾을 수 없어요'}
           </p>
+          {game?.progress === 'FINISHED' && (
+            <p className="tabular mt-2 text-sm font-semibold">
+              최종 {game.homeScore} : {game.awayScore}
+              {game.winner && (
+                <span className="ml-2 text-slate-500">{winnerLabel(game.winner, game.homeTeam, game.awayTeam)}</span>
+              )}
+            </p>
+          )}
         </div>
       </div>
 

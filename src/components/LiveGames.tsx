@@ -1,37 +1,35 @@
-import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { GameSummaryResponse } from '../api/types'
-import { simulateLive, type LiveState } from '../lib/liveMock'
+import { useLiveState } from '../hooks/useLiveGame'
 import { teamColor, teamInitial } from '../lib/teamColors'
 
-const TICK_MS = 30_000
 const INNINGS = 9
+const POLL_MS = 15_000
 
-/** 진행 중인 경기를 카드로 보여준다. 이닝·점수는 liveMock 시뮬레이션 값이다. */
+/** 진행 중인 경기 카드. 점수와 이닝은 서버 진행 상태를 주기적으로 받아 보여준다. */
 export function LiveGames({ games }: { games: GameSummaryResponse[] }) {
-  // 30초마다 시뮬레이션 시각을 갱신한다. 렌더 중에 Date.now()를 읽지 않도록 상태로 둔다.
-  const [now, setNow] = useState(() => Date.now())
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), TICK_MS)
-    return () => window.clearInterval(timer)
-  }, [])
-
   if (games.length === 0) return null
-
   return (
     <div className="grid gap-3">
-      {games.map((game) => (
-        <LiveCard key={game.id} game={game} live={simulateLive(game.id, now)} />
+      {games.map((game, index) => (
+        <div key={game.id} className="animate-fade-up" style={{ animationDelay: `${index * 120}ms` }}>
+          <LiveCard game={game} />
+        </div>
       ))}
     </div>
   )
 }
 
-function LiveCard({ game, live }: { game: GameSummaryResponse; live: LiveState }) {
+function LiveCard({ game }: { game: GameSummaryResponse }) {
+  const { data: live } = useLiveState(game.id, POLL_MS)
+  const inning = live?.inning ?? 0
+  const homeScore = live?.homeScore ?? game.homeScore
+  const awayScore = live?.awayScore ?? game.awayScore
+
   return (
     <Link
-      to={`/booking/${game.id}`}
-      className="press group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:bg-slate-900"
+      to={`/games/${game.id}/live`}
+      className="block rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md dark:border-slate-800 dark:bg-slate-900"
     >
       <div className="flex items-center justify-between">
         <span className="flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-0.5 text-[11px] font-bold text-red-600 dark:bg-red-950 dark:text-red-400">
@@ -42,25 +40,25 @@ function LiveCard({ game, live }: { game: GameSummaryResponse; live: LiveState }
           LIVE
         </span>
         <span className="tabular text-xs font-semibold text-slate-500">
-          {live.inning}회 {live.half === 'top' ? '초' : '말'}
+          {inning > 0 && live?.half ? `${inning}회 ${live.half === 'TOP' ? '초' : '말'}` : '진행 중'}
         </span>
       </div>
 
       <div className="mt-3 flex items-center justify-between gap-3">
-        <TeamScore team={game.awayTeam} score={live.awayScore} />
+        <TeamScore team={game.awayTeam} score={awayScore} />
         <span className="text-xs font-bold text-slate-300 dark:text-slate-600">vs</span>
-        <TeamScore team={game.homeTeam} score={live.homeScore} alignEnd />
+        <TeamScore team={game.homeTeam} score={homeScore} alignEnd />
       </div>
 
       {/* 이닝 진행: 지나간 회는 채우고 현재 회는 반만 채운다. */}
-      <div className="mt-4 flex gap-1" aria-label={`${live.inning}회 진행`}>
+      <div className="mt-4 flex gap-1" aria-label={`${inning}회 진행`}>
         {Array.from({ length: INNINGS }, (_, index) => {
-          const inning = index + 1
-          const done = inning < live.inning
-          const current = inning === live.inning
+          const number = index + 1
+          const done = number < inning
+          const current = number === inning
           return (
             <span
-              key={inning}
+              key={number}
               className={[
                 'h-1.5 flex-1 rounded-full',
                 done ? 'bg-slate-900 dark:bg-slate-100' : current ? 'bg-slate-300 dark:bg-slate-600' : 'bg-slate-100 dark:bg-slate-800',

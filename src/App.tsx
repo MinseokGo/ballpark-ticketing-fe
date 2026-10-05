@@ -3,6 +3,7 @@ import { Layout } from './components/Layout'
 import { BookingGamesPage } from './pages/BookingGamesPage'
 import { BookingSeatMapPage } from './pages/BookingSeatMapPage'
 import { HomePage } from './pages/HomePage'
+import { LiveGamePage } from './pages/LiveGamePage'
 import { ProfilePage } from './pages/ProfilePage'
 import { TeamSchedulePage } from './pages/TeamSchedulePage'
 
@@ -13,6 +14,7 @@ function App() {
         <Route index element={<HomePage />} />
         <Route path="booking" element={<BookingGamesPage />} />
         <Route path="booking/:gameId" element={<BookingSeatMapPage />} />
+        <Route path="games/:gameId/live" element={<LiveGamePage />} />
         <Route path="schedule" element={<TeamSchedulePage />} />
         <Route path="profile" element={<ProfilePage />} />
       </Route>
