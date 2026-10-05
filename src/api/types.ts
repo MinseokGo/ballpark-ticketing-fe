@@ -75,6 +75,15 @@ export type LiveEventResponse = {
   terminal: boolean
 }
 
+/** 경기 채팅 메시지. id는 메시지 번호라서 재접속 복구와 중복 거르기에 쓴다. */
+export type ChatMessageResponse = {
+  id: number
+  gameId: number
+  userId: number
+  content: string
+  createdAt: string
+}
+
 export type PageResponse<T> = {
   content: T[]
   page: number

@@ -1,5 +1,6 @@
 import { apiGet, apiPost } from './client'
 import type {
+  ChatMessageResponse,
   GameResponse,
   LiveStateResponse,
   GameSummaryResponse,
@@ -18,6 +19,18 @@ export function listGames(page: number, size: number): Promise<PageResponse<Game
 
 export function getGame(gameId: number): Promise<GameResponse> {
   return apiGet<GameResponse>(`/api/games/${gameId}`)
+}
+
+export function listChatMessages(gameId: number): Promise<ChatMessageResponse[]> {
+  return apiGet<ChatMessageResponse[]>(`/api/games/${gameId}/chat/messages`)
+}
+
+export function postChatMessage(gameId: number, userId: number, content: string): Promise<ChatMessageResponse> {
+  return apiPost<ChatMessageResponse, { content: string }>(
+    `/api/games/${gameId}/chat/messages`,
+    { content },
+    { 'X-User-Id': String(userId) },
+  )
 }
 
 export function getLiveState(gameId: number): Promise<LiveStateResponse> {
