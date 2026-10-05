@@ -1,5 +1,6 @@
 import { Route, Routes } from 'react-router-dom'
 import { Layout } from './components/Layout'
+import { AuthPage } from './pages/AuthPage'
 import { BookingGamesPage } from './pages/BookingGamesPage'
 import { BookingSeatMapPage } from './pages/BookingSeatMapPage'
 import { HomePage } from './pages/HomePage'
@@ -21,6 +22,7 @@ function App() {
         <Route path="games/:gameId/record" element={<RecordPage />} />
         <Route path="schedule" element={<TeamSchedulePage />} />
         <Route path="profile" element={<ProfilePage />} />
+        <Route path="login" element={<AuthPage />} />
       </Route>
     </Routes>
   )

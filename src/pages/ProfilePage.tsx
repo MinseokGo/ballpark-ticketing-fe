@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { cancelReservation, listGames } from '../api/booking'
@@ -49,7 +49,8 @@ function dateTimeLabel(iso: string) {
 }
 
 export function ProfilePage() {
-  const { entries, upsert } = useBookingHistory()
+  const { entries } = useBookingHistory()
+  const queryClient = useQueryClient()
   // 경기 시작 여부 판단용 기준 시각. 렌더 중에 Date.now()를 매번 읽지 않도록 마운트 때 한 번만 잡는다.
   const [now] = useState(() => Date.now())
   const [filter, setFilter] = useState<Filter>('ALL')
@@ -65,8 +66,8 @@ export function ProfilePage() {
 
   const cancelMutation = useMutation({
     mutationFn: (entry: BookingHistoryEntry) => cancelReservation(entry.reservationId),
-    onSuccess: (cancelled, entry) => {
-      upsert({ ...entry, status: cancelled.status, updatedAt: new Date().toISOString() })
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['myReservations'] })
     },
   })
 

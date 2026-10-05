@@ -86,7 +86,37 @@ export type ChatMessageResponse = {
   id: number
   gameId: number
   userId: number
+  nickname: string | null
   content: string
+  createdAt: string
+}
+
+export type UserResponse = {
+  id: number
+  email: string
+  nickname: string
+}
+
+export type AuthResponse = {
+  token: string
+  user: UserResponse
+}
+
+/** 내 예약 한 건. 경기 정보와 진행 상태를 같이 받는다. */
+export type MyReservationResponse = {
+  reservationId: number
+  gameId: number
+  homeTeam: string
+  awayTeam: string
+  startAt: string
+  gameStatus: GameStatus
+  gameProgress: GameProgress
+  homeScore: number
+  awayScore: number
+  winner: Winner | null
+  status: ReservationStatus
+  totalPrice: number
+  seatCount: number
   createdAt: string
 }
 

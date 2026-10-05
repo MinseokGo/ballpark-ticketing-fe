@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { KeyboardEvent } from 'react'
-import { CURRENT_USER_ID } from '../constants'
+import { useAuth } from '../hooks/useAuth'
 import { useLiveChat } from '../hooks/useLiveChat'
 import { ApiError } from '../api/client'
 import { formatKst } from '../lib/serverTime'
@@ -11,6 +11,7 @@ const MAX_LENGTH = 200
 /** 경기 채팅 패널. 내 메시지는 오른쪽, 다른 사람 메시지는 왼쪽에 놓는다. */
 export function GameChatPanel({ gameId }: { gameId: number }) {
   const chat = useLiveChat(gameId)
+  const { user } = useAuth()
   const [draft, setDraft] = useState('')
   const listRef = useRef<HTMLDivElement>(null)
 
@@ -52,10 +53,10 @@ export function GameChatPanel({ gameId }: { gameId: number }) {
           <p className="pt-10 text-center text-sm text-slate-500">첫 메시지를 남겨 보세요.</p>
         )}
         {chat.messages.map((message) => {
-          const mine = message.userId === CURRENT_USER_ID
+          const mine = user !== null && message.userId === user.id
           return (
             <div key={message.id} className={`animate-fade-up flex flex-col ${mine ? 'items-end' : 'items-start'}`}>
-              {!mine && <span className="mb-1 text-[11px] text-slate-500">사용자 #{message.userId}</span>}
+              {!mine && <span className="mb-1 text-[11px] text-slate-500">{message.nickname ?? '알 수 없음'}</span>}
               <div
                 className={[
                   'max-w-[85%] break-words rounded-2xl px-3.5 py-2 text-sm',
@@ -88,7 +89,8 @@ export function GameChatPanel({ gameId }: { gameId: number }) {
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={onKeyDown}
           maxLength={MAX_LENGTH}
-          placeholder="메시지를 입력하세요"
+          disabled={user === null}
+          placeholder={user ? '메시지를 입력하세요' : '로그인하면 채팅할 수 있어요'}
           aria-label="채팅 메시지"
           className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm outline-none transition-colors focus:border-blue-400 dark:border-slate-700 dark:bg-slate-950"
         />
