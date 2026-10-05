@@ -8,6 +8,7 @@ import { ErrorBanner } from '../components/Banner'
 import { Skeleton } from '../components/Skeleton'
 import { useBookingHistory, type BookingHistoryEntry } from '../hooks/useBookingHistory'
 import { winnerLabel } from '../lib/gameResult'
+import { gameHref } from '../lib/gameRoutes'
 import { teamColor, teamInitial } from '../lib/teamColors'
 import { formatKst, parseServerTime } from '../lib/serverTime'
 
@@ -263,7 +264,7 @@ function ReservationCard({
 
       <div className="mt-auto flex gap-2">
         <Link
-          to={`/booking/${entry.gameId}`}
+          to={(game && gameHref(game)) ?? `/booking/${entry.gameId}`}
           className="press flex-1 rounded-full border border-slate-200 px-4 py-2.5 text-center text-sm font-semibold hover:border-slate-300 dark:border-slate-700"
         >
           경기 화면
