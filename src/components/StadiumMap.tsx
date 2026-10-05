@@ -350,19 +350,16 @@ function drawStadium(
   ctx.lineWidth = 1
   ctx.stroke()
 
-  // 구역 목록에서 고른 구역: 좌석 바깥쪽 가장자리에 얇은 선을 두른다. 선이 좌석 위로 지나가지 않도록 구역 경계에서 살짝 떨어뜨린다.
+  // 구역 목록에서 고른 구역: 테두리 없이 그 밖의 영역만 살짝 어둡게 덮는다. 고른 구역은 원래 밝기로 남아 강조된다.
   if (focusSectionId !== null) {
     const band = layout.bands.find((b) => b.sectionId === focusSectionId)
     if (band) {
-      const ring = annularPath(band.bInner - 2.5, band.bOuter + 2.5, band.fStart, band.fEnd)
+      const shade = new Path2D()
+      shade.rect(-300, -300, 900, 900)
+      shade.addPath(band.outline)
       ctx.globalAlpha = 1
-      ctx.lineJoin = 'round'
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)'
-      ctx.lineWidth = 1.2
-      ctx.stroke(ring)
-      ctx.strokeStyle = '#0F172A'
-      ctx.lineWidth = 0.5
-      ctx.stroke(ring)
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.42)'
+      ctx.fill(shade, 'evenodd')
     }
   }
 
