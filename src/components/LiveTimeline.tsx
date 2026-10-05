@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import type { LiveEventResponse } from '../api/types'
 import { formatKst } from '../lib/serverTime'
 
@@ -6,9 +7,10 @@ type Team = { home: string; away: string }
 type Entry = { event: LiveEventResponse; prev: LiveEventResponse | null }
 
 /** 카드 높이, 카드 사이 간격, 쌓일 때 한 장당 밀리는 간격. 맨 위에서 쌓이는 장수는 STACK_DEPTH로 제한한다. */
-const CARD_HEIGHT = 84
-const GAP = 12
-const STEP_Y = 14
+const CARD_HEIGHT = 96
+// 카드끼리 겹치는 높이. 뒤 카드는 앞 카드 아래로 이만큼만 보이므로, 그 띠(아래쪽)에 제목과 점수를 둔다.
+const TAB_HEIGHT = 34
+// 쌓인 깊이에 따른 계단식 크기: 앞에서 멀어질수록 한 단계씩 작아진다(최대 STACK_DEPTH 단계).
 const STACK_DEPTH = 3
 const STEP_SCALE = 0.035
 
@@ -83,22 +85,23 @@ function EventCard({ entry, team }: { entry: Entry; team: Team }) {
   const { event, prev } = entry
   const tone = TONE[event.type] ?? TONE.GAME_STARTED
   return (
-    <div className="flex h-full items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 pr-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-      <span className={`size-2.5 shrink-0 rounded-full ${tone.dot}`} />
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${tone.chip}`}>{inningLabel(event)}</span>
-          {event.createdAt && (
-            <span className="tabular text-[11px] text-slate-500">
-              {formatKst(event.createdAt, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-            </span>
-          )}
-        </div>
-        <p className={`mt-1 truncate font-semibold ${tone.text}`}>{titleOf(event, prev, team)}</p>
+    <div className="flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <div className="flex items-center gap-2">
+        <span className={`size-2 shrink-0 rounded-full ${tone.dot}`} />
+        <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${tone.chip}`}>{inningLabel(event)}</span>
+        {event.createdAt && (
+          <span className="tabular text-[11px] text-slate-500">
+            {formatKst(event.createdAt, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+          </span>
+        )}
       </div>
-      <span className="tabular shrink-0 rounded-xl bg-slate-100 px-3 py-1.5 text-sm font-extrabold dark:bg-slate-800">
-        {event.homeScore} : {event.awayScore}
-      </span>
+      {/* 아래 띠: 뒤에 가려진 카드에서도 여기는 보인다. */}
+      <div className="flex items-center gap-3" style={{ height: TAB_HEIGHT }}>
+        <p className={`min-w-0 flex-1 truncate font-semibold ${tone.text}`}>{titleOf(event, prev, team)}</p>
+        <span className="tabular shrink-0 rounded-lg bg-slate-100 px-2.5 py-1 text-sm font-extrabold dark:bg-slate-800">
+          {event.homeScore} : {event.awayScore}
+        </span>
+      </div>
     </div>
   )
 }
@@ -109,6 +112,37 @@ function EventCard({ entry, team }: { entry: Entry; team: Team }) {
  */
 export function LiveTimeline({ events, team }: { events: LiveEventResponse[]; team?: Team }) {
   const names: Team = team ?? { home: '홈', away: '원정' }
+  const boxRef = useRef<HTMLDivElement>(null)
+
+  // 스크롤 위치의 가운데 카드가 가장 크게 보이도록 카드 중심과 상자 중심의 거리로 배율을 정한다.
+  // React 상태를 거치지 않고 스타일을 직접 바꿔서 스크롤 중에도 다시 그리지 않는다.
+  useEffect(() => {
+    const box = boxRef.current
+    if (!box) return
+    let frame = 0
+    const update = () => {
+      frame = 0
+      const boxRect = box.getBoundingClientRect()
+      const middle = boxRect.top + boxRect.height / 2
+      box.querySelectorAll<HTMLElement>('[data-card]').forEach((el) => {
+        const rect = el.getBoundingClientRect()
+        const distance = Math.min(1, Math.abs(rect.top + rect.height / 2 - middle) / (boxRect.height / 2))
+        // 계단식 크기(쌓인 깊이) × 가운데 가까울수록 커지는 배율
+        const depth = Number(el.dataset.depth ?? 0)
+        const stepped = 1 - depth * STEP_SCALE
+        el.style.transform = `scale(${stepped * (1.06 - distance * 0.12)})`
+      })
+    }
+    const onScroll = () => {
+      if (!frame) frame = requestAnimationFrame(update)
+    }
+    update()
+    box.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      box.removeEventListener('scroll', onScroll)
+      cancelAnimationFrame(frame)
+    }
+  }, [events.length])
 
   if (events.length === 0) {
     return (
@@ -124,31 +158,26 @@ export function LiveTimeline({ events, team }: { events: LiveEventResponse[]; te
   const newestFirst = [...entries].reverse()
 
   return (
-    <div className="h-[560px] overflow-y-auto rounded-3xl border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-4 dark:border-slate-800 dark:from-slate-900 dark:to-slate-950">
-      {newestFirst.map((entry, index) => {
-        // 각 카드는 자기 칸을 차지하고, 스크롤로 그 칸을 지나갈 때 위에 붙어 쌓인다.
-        // 최신 카드가 가장 위·가장 앞에 있고, 뒤에 오는 카드는 한 칸씩 밀리고 작아진다.
-        const depth = Math.min(index, STACK_DEPTH)
-        return (
-          <div key={entry.event.seq} style={{ height: CARD_HEIGHT + GAP }}>
-            <div
-              className="sticky transition-[transform,opacity] duration-500 ease-out"
-              style={{
-                top: depth * STEP_Y,
-                height: CARD_HEIGHT,
-                zIndex: 100 - index,
-                transform: `scale(${1 - depth * STEP_SCALE})`,
-                transformOrigin: 'center top',
-              }}
-            >
-              {/* 새 카드만 멀리서 다가오는 등장을 한다. 이미 있던 카드는 key가 같아서 다시 움직이지 않는다. */}
-              <div className={index === 0 ? 'animate-rise h-full' : 'h-full'}>
-                <EventCard entry={entry} team={names} />
-              </div>
-            </div>
+    <div ref={boxRef} className="h-[560px] overflow-y-auto rounded-3xl border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-4 pb-8 dark:border-slate-800 dark:from-slate-900 dark:to-slate-950">
+      {newestFirst.map((entry, index) => (
+        // 새 기록은 위에 있고, 뒤에 오는 카드는 앞 카드 밑에 겹쳐서 아래 띠만 보인다. 스크롤하면 뒤 카드가 올라온다.
+        <div
+          key={entry.event.seq}
+          data-card
+          data-depth={Math.min(index, STACK_DEPTH)}
+          className="relative transition-transform duration-200 ease-out"
+          style={{
+            height: CARD_HEIGHT,
+            marginTop: index === 0 ? 0 : TAB_HEIGHT - CARD_HEIGHT,
+            zIndex: 100 - index,
+          }}
+        >
+          {/* 새 카드만 멀리서 다가오는 등장을 한다. 이미 있던 카드는 key가 같아서 다시 움직이지 않는다. */}
+          <div className={index === 0 ? 'animate-rise h-full' : 'h-full'}>
+            <EventCard entry={entry} team={names} />
           </div>
-        )
-      })}
+        </div>
+      ))}
     </div>
   )
 }
