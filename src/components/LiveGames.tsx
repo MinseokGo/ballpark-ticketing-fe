@@ -10,9 +10,9 @@ const POLL_MS = 15_000
 export function LiveGames({ games }: { games: GameSummaryResponse[] }) {
   if (games.length === 0) return null
   return (
-    <div className="depth-stage grid gap-3">
+    <div className="grid gap-3">
       {games.map((game, index) => (
-        <div key={game.id} className="animate-rise" style={{ animationDelay: `${index * 140}ms` }}>
+        <div key={game.id} className="animate-fade-up" style={{ animationDelay: `${index * 120}ms` }}>
           <LiveCard game={game} />
         </div>
       ))}
@@ -29,7 +29,7 @@ function LiveCard({ game }: { game: GameSummaryResponse }) {
   return (
     <Link
       to={`/games/${game.id}/live`}
-      className="press group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:bg-slate-900"
+      className="block rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md dark:border-slate-800 dark:bg-slate-900"
     >
       <div className="flex items-center justify-between">
         <span className="flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-0.5 text-[11px] font-bold text-red-600 dark:bg-red-950 dark:text-red-400">

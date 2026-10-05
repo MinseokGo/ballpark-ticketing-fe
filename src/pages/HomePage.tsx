@@ -184,7 +184,9 @@ export function HomePage() {
 
   const games = data?.content ?? []
   const byId = new Map(games.map((game) => [game.id, game] as const))
+  // 끝났거나 취소된 경기는 다음 경기가 아니다.
   const upcoming = games
+    .filter((game) => game.progress !== 'FINISHED' && game.progress !== 'CANCELLED')
     .filter((game) => parseServerTime(game.startAt) >= now || sameDay(parseServerTime(game.startAt), now))
     .sort((a, b) => a.startAt.localeCompare(b.startAt))
   const next = upcoming[0]
