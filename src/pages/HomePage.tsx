@@ -171,7 +171,9 @@ function Panel({
   className?: string
 }) {
   return (
-    <section className={`animate-fade-up flex h-full min-h-0 flex-col gap-3 ${className}`}>
+    <section
+      className={`animate-fade-up flex h-full min-h-0 flex-col gap-3 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 ${className}`}
+    >
       <div className="flex items-baseline justify-between">
         <h2 className="text-lg font-bold">{title}</h2>
         {action && (
@@ -230,7 +232,7 @@ export function HomePage() {
           {isPending && <Skeleton className="h-72" />}
           {next && <NextGameHero game={next} now={now} />}
           {data && !next && (
-            <p className="rounded-3xl border border-dashed border-slate-200 p-10 text-center text-sm text-slate-500 dark:border-slate-700">
+            <p className="flex h-full items-center justify-center rounded-3xl border border-dashed border-slate-200 p-10 text-center text-sm text-slate-500 dark:border-slate-700">
               곧 열리는 경기가 없어요. 새 일정이 올라오면 여기서 먼저 알려드릴게요.
             </p>
           )}
@@ -245,7 +247,7 @@ export function HomePage() {
               <LiveGames games={live} />
             </ScrollBox>
           ) : (
-            <p className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500 dark:border-slate-700">
+            <p className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500 dark:border-slate-700">
               지금 중계 중인 경기가 없어요.
             </p>
           )}

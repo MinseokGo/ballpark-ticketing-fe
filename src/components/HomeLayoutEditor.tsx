@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { COLUMNS, MAX_SPAN, type HomeWidgetId, type PlacedWidget } from '../lib/homeGrid'
 
-const CELL_H = 56
-const GAP = 8
+// 홈 격자와 같은 비율로 줄인 칸 크기: 한 칸 96px·간격 24px을 0.6배 한 값
+const CELL_H = 58
+const GAP = 14
 
 /**
  * 홈 위젯 편집 팝업. 모눈종이 위에 실제 홈과 같은 배치로 위젯을 보여준다.
