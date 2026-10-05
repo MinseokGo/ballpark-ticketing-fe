@@ -7,6 +7,7 @@ import { EventBanner } from '../components/EventBanner'
 import { GameTile } from '../components/GameTile'
 import { LiveGames } from '../components/LiveGames'
 import { Skeleton, SkeletonList } from '../components/Skeleton'
+import { ScrollBox } from '../components/ScrollBox'
 import { useBookingHistory, type BookingHistoryEntry } from '../hooks/useBookingHistory'
 import { teamColor, teamInitial } from '../lib/teamColors'
 import { formatKst, kstDateKey, parseServerTime } from '../lib/serverTime'
@@ -199,7 +200,7 @@ export function HomePage() {
   const recentResults = games
     .filter((game) => game.progress === 'FINISHED')
     .sort((a, b) => b.startAt.localeCompare(a.startAt))
-    .slice(0, 3)
+    .slice(0, 12)
   const myActive = entries.filter((entry) => entry.status !== 'CANCELLED')
 
   // 결제가 끝나지 않은 예매는 가장 먼저 알려야 해서 맨 위 알림으로 올린다.
@@ -252,7 +253,9 @@ export function HomePage() {
         </div>
         <Panel title="지금 진행 중">
           {live.length > 0 ? (
-            <LiveGames games={live} />
+            <ScrollBox>
+              <LiveGames games={live} />
+            </ScrollBox>
           ) : (
             <p className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500 dark:border-slate-700">
               지금 중계 중인 경기가 없어요.
@@ -277,35 +280,41 @@ export function HomePage() {
               <span aria-hidden>→</span>
             </Link>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {myActive.map((entry) => (
-                <MyReservationCard key={entry.reservationId} entry={entry} game={byId.get(entry.gameId)} />
-              ))}
-            </div>
+            <ScrollBox>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {myActive.map((entry) => (
+                  <MyReservationCard key={entry.reservationId} entry={entry} game={byId.get(entry.gameId)} />
+                ))}
+              </div>
+            </ScrollBox>
           )}
         </Panel>
         <Panel title="오늘의 경기" action={{ to: '/schedule', label: '일정' }}>
           {todays.length === 0 ? (
             <p className="rounded-2xl bg-white p-5 text-sm text-slate-500 dark:bg-slate-900">오늘은 예정된 경기가 없어요.</p>
           ) : (
-            <div className="grid gap-2">
-              {todays.map((game) => (
-                <GameTile key={game.id} game={game} now={now} />
-              ))}
-            </div>
+            <ScrollBox>
+              <div className="grid gap-2">
+                {todays.map((game) => (
+                  <GameTile key={game.id} game={game} now={now} />
+                ))}
+              </div>
+            </ScrollBox>
           )}
         </Panel>
       </div>
 
       {recentResults.length > 0 && (
         <Panel title="최근 결과">
-          <div className="depth-stage grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {recentResults.map((game, index) => (
-              <div key={game.id} className="animate-rise" style={{ animationDelay: `${index * 90}ms` }}>
-                <GameTile game={game} now={now} />
-              </div>
-            ))}
-          </div>
+          <ScrollBox>
+            <div className="depth-stage grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {recentResults.map((game, index) => (
+                <div key={game.id} className="animate-rise" style={{ animationDelay: `${Math.min(index, 8) * 90}ms` }}>
+                  <GameTile game={game} now={now} />
+                </div>
+              ))}
+            </div>
+          </ScrollBox>
         </Panel>
       )}
 
@@ -317,13 +326,15 @@ export function HomePage() {
             아직 열린 경기가 없어요.
           </p>
         )}
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {upcoming.slice(0, 6).map((game, index) => (
-            <div key={game.id} className="animate-rise" style={{ animationDelay: `${index * 90}ms` }}>
-              <GameTile game={game} now={now} />
-            </div>
-          ))}
-        </div>
+        <ScrollBox>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {upcoming.map((game, index) => (
+              <div key={game.id} className="animate-rise" style={{ animationDelay: `${Math.min(index, 8) * 90}ms` }}>
+                <GameTile game={game} now={now} />
+              </div>
+            ))}
+          </div>
+        </ScrollBox>
       </Panel>
 
       {/* 4행: 이벤트는 가로로 넓게 */}

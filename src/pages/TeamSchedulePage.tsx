@@ -2,8 +2,10 @@ import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { listGames } from '../api/booking'
 import type { GameSummaryResponse } from '../api/types'
+import { GameCalendar } from '../components/GameCalendar'
 import { GameTile } from '../components/GameTile'
 import { Skeleton } from '../components/Skeleton'
+import { kstDateKey } from '../lib/serverTime'
 import { teamColor, teamInitial } from '../lib/teamColors'
 
 // 백엔드 목록 API의 최대 페이지 크기. 데모 데이터(경기 5개)는 한 번에 다 들어온다.
@@ -115,6 +117,12 @@ export function TeamSchedulePage() {
                 </div>
               </div>
             </div>
+
+            <GameCalendar
+              games={schedule}
+              todayKey={kstDateKey(now)}
+              renderGame={(game) => <GameTile key={game.id} game={game} now={now} perspective={team} />}
+            />
 
             {schedule.length === 0 ? (
               <p className="rounded-2xl border border-dashed border-slate-200 p-8 text-center text-sm text-slate-500 dark:border-slate-700">
