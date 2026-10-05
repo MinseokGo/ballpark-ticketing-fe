@@ -1,2 +1,5 @@
-export const SECTIONS_REGISTRY_KEY = 'ballpark-admin.sections'
-export const GAMES_REGISTRY_KEY = 'ballpark-admin.games'
+/**
+ * 인증이 없는 v1이라 모든 예매는 이 사용자 한 명으로 한다(X-User-Id 헤더).
+ * 사용자 전환 화면은 두지 않는다. 인증이 생기면 이 값 대신 로그인 사용자를 쓴다.
+ */
+export const CURRENT_USER_ID = 1

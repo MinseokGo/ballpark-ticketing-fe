@@ -18,7 +18,7 @@ import { SeatStatusLegend } from '../components/SeatStatusLegend'
 import { SelectedSeatsBar, type SelectedSeat } from '../components/SelectedSeatsBar'
 import { ZoneLegend } from '../components/ZoneLegend'
 import { useBookingHistory } from '../hooks/useBookingHistory'
-import { useUserId } from '../hooks/useUserId'
+import { CURRENT_USER_ID } from '../constants'
 import { teamColor } from '../lib/teamColors'
 import type { ReservationResponse, SeatMapItemResponse } from '../api/types'
 
@@ -34,8 +34,6 @@ export function BookingSeatMapPage() {
   const { gameId: gameIdParam } = useParams<{ gameId: string }>()
   const gameId = Number(gameIdParam)
   const queryClient = useQueryClient()
-  const [userId, setUserId] = useUserId()
-  const [showUserSwitch, setShowUserSwitch] = useState(false)
   const { upsert: upsertHistory } = useBookingHistory()
   const [selectedSeatIds, setSelectedSeatIds] = useState<Set<number>>(new Set())
   const [reservation, setReservation] = useState<ReservationResponse | null>(null)
@@ -68,7 +66,7 @@ export function BookingSeatMapPage() {
   }
 
   const reserveMutation = useMutation({
-    mutationFn: () => createReservation(gameId, userId, { gameSeatIds: [...selectedSeatIds] }),
+    mutationFn: () => createReservation(gameId, CURRENT_USER_ID, { gameSeatIds: [...selectedSeatIds] }),
     onSuccess: (created) => {
       setReservation(created)
       setSelectedSeatIds(new Set())
@@ -164,31 +162,9 @@ export function BookingSeatMapPage() {
 
   return (
     <div className="space-y-6 pb-32">
-      <div className="flex items-center justify-between">
-        <Link to="/booking" className="text-sm text-slate-500 hover:underline">
-          ← 경기 목록
-        </Link>
-        <button
-          type="button"
-          onClick={() => setShowUserSwitch((prev) => !prev)}
-          className="flex size-8 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white"
-        >
-          {userId}
-        </button>
-      </div>
-
-      {showUserSwitch && (
-        <label className="block w-44 text-sm">
-          사용자 전환
-          <input
-            type="number"
-            min={1}
-            value={userId}
-            onChange={(event) => setUserId(Number(event.target.value) || 1)}
-            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700 dark:bg-slate-900"
-          />
-        </label>
-      )}
+      <Link to="/booking" className="inline-flex w-fit items-center gap-1 text-sm font-medium text-slate-500 transition-colors hover:text-blue-600">
+        ← 경기 목록
+      </Link>
 
       <div
         className="rounded-3xl p-6 text-white"

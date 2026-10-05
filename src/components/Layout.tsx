@@ -40,10 +40,8 @@ export function Layout() {
   const { theme, cycle } = useTheme()
   // 좌석 지도 화면은 하단에 예매·결제 바가 떠 있어서 탭 바와 겹치지 않게 숨긴다.
   const onSeatMap = /^\/booking\/\d+/.test(pathname)
-  // 헤더는 항상 화면 전체 폭을 쓴다. 본문은 글 위주 화면만 읽기 폭으로 제한하고, 좌석 지도는 전체를 쓴다.
-  // 홈과 좌석 지도는 화면 폭을 다 쓰고, 글 위주 화면만 읽기 폭으로 제한한다.
-  const wide = onSeatMap || pathname === '/'
-  const contentClass = wide ? 'w-full px-4 py-6 pb-24 sm:px-6 sm:pb-8 lg:px-10' : 'mx-auto max-w-3xl px-4 py-8 pb-24 sm:pb-8'
+  // 모든 화면은 화면 폭을 다 쓴다. 화면 안에서 그리드로 나눠 배치한다.
+  const contentClass = 'w-full px-4 py-6 pb-24 sm:px-6 sm:pb-8 lg:px-10'
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-50">
@@ -60,12 +58,6 @@ export function Layout() {
                   {item.label}
                 </NavLink>
               ))}
-              <NavLink
-                to="/admin"
-                className="press ml-1 rounded-full px-3 py-2 text-xs font-medium text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-300"
-              >
-                관리자
-              </NavLink>
             </nav>
             <button
               type="button"
@@ -89,7 +81,7 @@ export function Layout() {
 
       {!onSeatMap && (
         <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200/80 bg-white/90 backdrop-blur-md sm:hidden dark:border-slate-800 dark:bg-slate-950/90">
-          <div className="mx-auto flex max-w-3xl">
+          <div className="flex w-full">
             {NAV_ITEMS.map((item) => (
               <NavLink key={item.to} to={item.to} className={tabClassName} end>
                 <span className="text-lg leading-none">{item.icon}</span>
