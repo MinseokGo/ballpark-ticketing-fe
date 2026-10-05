@@ -49,9 +49,11 @@ export function LiveTimeline({ events }: { events: LiveEventResponse[] }) {
           <span className={`mt-1.5 size-2.5 shrink-0 rounded-full ${DOT[event.type] ?? 'bg-slate-400'}`} />
           <div className="min-w-0 flex-1">
             <p className="font-semibold">{describe(event)}</p>
-            <p className="tabular mt-0.5 text-xs text-slate-500">
-              {formatKst(event.createdAt, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-            </p>
+            {event.createdAt && (
+              <p className="tabular mt-0.5 text-xs text-slate-500">
+                {formatKst(event.createdAt, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+              </p>
+            )}
           </div>
         </li>
       ))}
