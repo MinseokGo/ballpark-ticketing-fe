@@ -4,8 +4,8 @@
 
 ## 프로젝트
 
-[ballpark-ticketing-be](https://github.com/MinseokGo/ballpark-ticketing-be)의 관리자/예매 화면을 제공하는
-React SPA. 백엔드가 v1~v7로 단계적으로 기능을 늘려가는 것과 병행해서, 그 시점에 실제로 존재하는 API를 바로
+[ballpark-ticketing-be](https://github.com/MinseokGo/ballpark-ticketing-be)의 소비자 화면(홈·예매·일정·마이페이지)을
+제공하는 React SPA. 백엔드가 v1~v7로 단계적으로 기능을 늘려가는 것과 병행해서, 그 시점에 실제로 존재하는 API를 바로
 눈으로 확인할 수 있는 화면을 붙여나간다.
 
 - 원칙: **백엔드에 없는 API를 프론트가 먼저 가정하고 만들지 않는다.** 화면은 그 시점에 실제로 호출 가능한
@@ -40,15 +40,11 @@ npm run lint      # oxlint
 이 레포는 백엔드가 그 시점에 제공하는 API만 호출한다. 작업 전에 백엔드 `CLAUDE.md`의 "진행 상황" 표와 열린
 이슈를 확인해서, 아직 없는 API를 가정하고 화면을 만들지 않는다.
 
-- 2026-10-04 기준 백엔드는 관리자 등록(구역·좌석·경기, 예매 오픈), 조회(경기 목록/상세, 구역별 잔여석,
-  좌석맵), 예매·Mock 결제·취소까지 다 있다(백엔드 1~4단계).
-- `/admin`, `/admin/sections`, `/admin/seats`, `/admin/games`(관리자 등록 화면)는 여전히 목록 조회를
-  안 쓴다 — "이 브라우저에서 등록한 것" 표는 `localStorage` 메모일 뿐이다(`src/hooks/useLocalRegistry.ts`).
-  경기 일정은 보통 백엔드 `seed` 프로필로 한 번에 만들고, 이 화면들은 추가·수정이 필요할 때만
-  쓰는 보조 도구라 메인 내비게이션에는 "관리자" 링크 하나로만 둔다.
-- `/booking`, `/booking/:gameId`(예매 화면)는 처음부터 실제 조회 API(경기 목록, 좌석맵, 구역별 잔여석)로
-  서버 데이터를 그대로 보여주고, 예매·결제·취소도 실제 API를 호출한다. `localStorage`에 남기는 건 데모용
-  사용자 ID(`src/hooks/useUserId.ts`) 하나뿐이다.
+- 2026-10-04 기준 백엔드는 관리자 등록, 조회(경기 목록/상세, 구역별 잔여석, 좌석맵), 예매·Mock 결제·취소까지
+  다 있다(백엔드 1~4단계). 관리자 화면은 쓸 일이 없어져서 프론트에서 지웠다(관리자 API 호출도 없다).
+- `/booking`, `/booking/:gameId`(예매 화면)는 실제 조회 API(경기 목록, 좌석맵, 구역별 잔여석)로 서버 데이터를
+  그대로 보여주고, 예매·결제·취소도 실제 API를 호출한다. 사용자는 `src/constants.ts`의 `CURRENT_USER_ID` 하나로
+  고정한다. 사용자 전환 화면은 두지 않는다(인증이 생기면 로그인 사용자로 바꾼다).
 - `/schedule`(팀별 일정)은 `GET /api/games`만 쓴다. 팀 목록도 백엔드 API가 없어서 경기 목록에서 모은다.
   경기 목록 API는 페이지 최대 100개라 데모 데이터(5경기)는 한 번에 들어오지만, 경기가 100개를 넘으면
   이 화면은 잘린다 — 그때 팀별 조회 API를 백엔드에 요청한다.
@@ -63,9 +59,9 @@ npm run lint      # oxlint
 
 ```
 src
-├── api          client.ts(fetch 래퍼, ProblemDetail 에러), admin.ts/booking.ts(엔드포인트별 함수), types.ts(요청/응답 타입)
-├── components   여러 화면이 같이 쓰는 것 (Layout, Banner, GameCard, SeatGridPreview, StadiumMap[canvas])
-├── hooks        useLocalRegistry, useUserId, useBookingHistory
+├── api          client.ts(fetch 래퍼, ProblemDetail 에러), booking.ts(엔드포인트별 함수), types.ts(요청/응답 타입)
+├── components   여러 화면이 같이 쓰는 것 (Layout, Banner, GameTile, LiveGames, StadiumMap[canvas] 등)
+├── hooks        useBookingHistory, useTheme
 ├── lib          teamColors.ts(팀 이름 → 강조색, 장식용), stadiumLayout.ts(구역 이름 → 돔 배치) 등 순수 유틸
 ├── pages        화면 단위 (HomePage, BookingGamesPage, BookingSeatMapPage, TeamSchedulePage, ProfilePage,
 │                AdminHomePage, SectionsPage, SeatsPage, GamesPage)
@@ -83,7 +79,7 @@ src
 - `tsconfig.app.json`이 `verbatimModuleSyntax: true`다. 타입만 쓰는 import는 `import type`으로 분리한다.
 - API 요청/응답 타입은 `src/api/types.ts`에 모은다. 백엔드 DTO(엔티티 아님)와 1:1로 맞춘다 — 백엔드가
   필드를 바꾸면 여기도 같이 바꾼다.
-- API 호출은 `src/api/admin.ts`처럼 `api/` 아래 함수로만 하고, 컴포넌트에서 `fetch`를 직접 쓰지 않는다.
+- API 호출은 `src/api/booking.ts`처럼 `api/` 아래 함수로만 하고, 컴포넌트에서 `fetch`를 직접 쓰지 않는다.
   컴포넌트는 TanStack Query의 `useMutation`/`useQuery`로 그 함수를 부른다.
 - 에러는 `ApiError`(`problem: ProblemDetail`)로 받는다. 화면(`ErrorBanner`)에는 `problem.detail`과
   `problem.errors`(필드별 사유)만 보여준다 — 백엔드 에러 메시지를 프론트에서 새로 쓰지는 않지만,
@@ -125,26 +121,28 @@ src
   좌석 행/열/가격/상태는 호버 툴팁으로 보여준다.
 - 색: 예매 가능(구역 색), 선점(황색 흐림), 판매(회색 흐림), 선택(초록).
 - 구역 둘러보기(`ZoneLegend`)는 지도 아래에 계열별로 30개 구역을 나열한다. 구역을 누르면 `StadiumMap`의 `focus`가 바뀌어서 그 구역 중심으로 줌인(`zoneView`, 450ms)되고 경계선을 친다. 같은 구역을 다시 눌러도 `nonce`로 다시 줌이 돈다.
-- 좌석 지도 화면은 `max-w-5xl`로 넓게 쓴다(하단 예매 바도 같은 폭).
+- **모든 화면은 화면 폭을 다 쓴다.** `Layout`의 본문은 `w-full`이고, 글만 있는 화면이라도 `max-w-*`로 줄이지 않는다.
+  화면 안에서 그리드(`lg:grid-cols-3`, `lg:grid-cols-[320px_minmax(0,1fr)]` 등)로 나눠서 넓은 화면을 채운다.
+  하단 고정 바(예매 바)는 `Layout`과 같은 폭(`w-full` + 같은 패딩)을 쓴다.
 - 좌석 배치(시드 기준): 구역마다 행·열 수를 다르게 둔다 — 중앙석은 뒤 층일수록 행이 많고(A 20행 → C 24행),
   외야석은 열이 길다(96~120열). 층(A/B/C)은 같은 계열 색을 `TIER_TINT`만큼 옅게 해서 구분한다. 블록 통로는
   `BLOCK_COLS`(12열)·`BLOCK_ROWS`(6행) 단위로 칸 사이를 넓혀서 그린다. 구역 경계도 같은 방식으로 틈을 준다.
   구역 이름표는 캔버스 화면 좌표(CSS px)에 따로 그린다 — 축소 땐 계열 이름("1루 외야석")만, `SECTION_LABEL_ZOOM`(2.5배) 이상이면 층별 이름("1루 외야석 B")으로 바뀐다.
 - 내비게이션: 상단 `Layout`의 메인 탭은 홈(`/`)·예매(`/booking`)·마이페이지(`/profile`) 3개만 둔다.
-  관리자 도구는 눈에 덜 띄는 보조 링크(`/admin`) 하나로 묶는다 — 일반 사용자가 쓸 화면이 아니다.
+  관리자 화면은 없다. 헤더에는 홈·예매·일정·마이페이지와 테마 버튼만 둔다.
 - 움직임: 화면이 바뀔 때 `Layout`이 경로를 key로 줘서 `animate-fade-up`이 다시 돈다. 로딩은 "불러오는 중..."
   대신 `Skeleton`(shimmer)을 쓴다. 버튼은 `press` 클래스로 누를 때 살짝 줄어든다. 결제 완료는 `Celebration`
   (색종이 한 번)과 `animate-pop` 체크 배지로 알린다. 모든 움직임은 `prefers-reduced-motion`에서 꺼진다.
 - 이벤트 배너(`EventBanner`, `src/lib/events.ts`)는 화면 콘텐츠다. 실제로 구현되지 않은 혜택(할인 등)은 문구로도 약속하지 않는다.
 - 모바일(sm 미만)에서는 상단 메뉴 대신 하단 탭 바를 쓴다. 좌석 지도 화면은 하단 예매 바와 겹쳐서 탭 바를 숨긴다.
 - 모바일 폭(390px 기준)에서 먼저 보고 깨지지 않는지 확인한다. 화면 하단에 고정되는 액션 바(예매 화면의
-  "예매하기"/결제 버튼)는 `fixed inset-x-0 bottom-0` + `mx-auto max-w-3xl`로 `Layout`의 본문 폭과 맞춘다.
-- **소비자 화면(홈·예매·마이페이지)에는 "이건 데모/테스트다"를 드러내는 문구나 조작을 두지 않는다.**
+  "예매하기"/결제 버튼)는 `fixed inset-x-0 bottom-0` + `w-full`과 `Layout`과 같은 패딩으로 본문 폭과 맞춘다.
+- **소비자 화면(홈·예매·일정·마이페이지)에는 "이건 데모/테스트다"를 드러내는 문구나 조작을 두지 않는다.**
   구체적으로: 에러에 내부 코드(`SEAT-002` 등)를 보여주지 않는다(`ErrorBanner`는 `detail`만 보여준다),
-  `X-User-Id` 같은 HTTP 헤더 이름을 화면 문구에 쓰지 않는다(그냥 "계정 전환"), Mock 결제는 성공/실패를
+  `X-User-Id` 같은 HTTP 헤더 이름을 화면 문구에 쓰지 않는다, Mock 결제는 성공/실패를
   고르는 버튼 두 개 대신 "결제하기" 버튼 하나만 둔다(성공 경로만 기본 노출), "서버에 ~ API가 없어서"
-  같은 구현 설명을 넣지 않는다. 이런 내부 사정은 코드 주석이나 이 문서에만 적는다. (관리자 화면은
-  예외 — 처음부터 개발용 도구라고 밝혀 두었으므로 `POST /api/admin/...` 같은 설명을 유지해도 된다.)
+  같은 구현 설명을 넣지 않는다. 이런 내부 사정은 코드 주석이나 이 문서에만 적는다.
+- **성능 측정·사용자 전환 같은 개발용 조작은 화면에 두지 않는다.** 실제 서비스처럼 보이는 화면만 남긴다.
 
 ## 결과·실시간 경기 흐름 설계 메모 (미구현)
 
@@ -207,9 +205,8 @@ Library를 추가한다. 지금은 `npm run build`(타입 체크)와 `npm run li
 | 단계 | 내용 | 상태 |
 |---|---|---|
 | 0 | 프로젝트 뼈대 (Vite + React + TS + Tailwind + Router + Query) | 완료 |
-| 1 | 관리자 콘솔: 구역 등록, 좌석 일괄 등록(격자 미리보기), 경기 등록 | 완료 |
+| 1 | ~~관리자 콘솔: 구역 등록, 좌석 일괄 등록(격자 미리보기), 경기 등록~~ | 완료 후 삭제 (관리자 화면은 필요 없어짐) |
 | 2 | 사용자 예매 화면: 경기 목록, 좌석맵 선택, 예매/Mock 결제/취소 | 완료 |
-| 3 | 비주얼 리디자인: 홈/마이페이지 신설, 경기장 돔 모양 구역 선택(`StadiumMap`), 관리자 화면을 `/admin`으로 분리 | 완료 |
+| 3 | 비주얼 리디자인: 홈/마이페이지 신설, 경기장 돔 모양 구역 선택(`StadiumMap`) | 완료 |
 
-열린 과제: 관리자 콘솔(`/admin/*`)의 `localStorage` 메모를 실제 조회 API로 교체할지 결정한다. 지금은
-예매 화면만 실제 조회를 쓴다.
+열린 과제: 실시간 중계(`liveMock`)와 결과 화면은 백엔드 API가 생기면 교체한다. 지금은 예매 화면과 일정·마이페이지가 실제 조회를 쓴다.

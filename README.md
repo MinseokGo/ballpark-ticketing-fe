@@ -12,19 +12,20 @@ visible instead of just reading raw JSON responses.
 
 ## Current scope
 
-The consumer-facing pages — home (`/`), booking (`/booking`, `/booking/:gameId`), and the profile page
-(`/profile`) — are the main app. They call the backend's query API for everything they show (game list, seat
-map, per-section availability) and the reservation/payment/cancel API for every action. The seat map is drawn
-as a stadium "dome" (`src/components/StadiumMap.tsx`, SVG) you tap to pick a section, then pick seats below it.
-`localStorage` is only used for a demo user id (`src/hooks/useUserId.ts`, standing in for real auth — the
-backend identifies users by the `X-User-Id` header; v1 has no login) and a "my bookings" history
-(`src/hooks/useBookingHistory.ts`, since there's no backend "list my reservations" endpoint yet).
+The consumer screens are the whole app: home (`/`), booking (`/booking`, `/booking/:gameId`), team schedule
+(`/schedule`), and My Page (`/profile`). Every screen uses the full browser width and lays its sections out in a
+grid. They call the backend's query API for everything they show (game list, seat map, per-section availability)
+and the reservation/payment/cancel API for every action. The seat map is a canvas "dome" (`StadiumMap`) where you
+tap seats directly.
 
-The admin pages (`/admin`, `/admin/sections`, `/admin/seats`, `/admin/games`) are a secondary, de-emphasized
-area (one muted "관리자" link in the header) for when the seed profile isn't enough. They only call write
-(`POST`) endpoints and don't list existing data — their "registered in this browser" tables are a
-`localStorage` memo used to pick a section/game id in another form, not a real data source, and can drift
-from what the server actually has (`src/hooks/useLocalRegistry.ts`).
+There is no login. Every reservation uses one fixed user id (`CURRENT_USER_ID` in `src/constants.ts`), sent as the
+backend's `X-User-Id` header. There is no user switcher.
+
+`localStorage` holds two things: the booking history of this browser (`src/hooks/useBookingHistory.ts`, since the
+backend has no "list my reservations" endpoint yet) and the theme choice (`src/hooks/useTheme.ts`: system, light,
+or dark).
+
+The admin screens were removed; the backend's seed profile creates the demo data instead.
 
 ## Local demo data
 
@@ -38,13 +39,11 @@ no real KBO API integration.
 
 | Route | Calls | Notes |
 |---|---|---|
-| `/` | `GET /api/games` | Home: hero + a preview of upcoming games. |
-| `/booking` | `GET /api/games` | Full game list; only `OPEN` ones link to the seat map. |
-| `/booking/:gameId` | `GET /api/games/{id}`, `.../seats`, `.../sections`, `POST .../reservations`, `POST /api/reservations/{id}/payments`, `POST /api/reservations/{id}/cancel` | The stadium map (`StadiumMap`, a canvas with zoom and pan) renders every individual seat in its real position (no separate "pick a section, then pick a seat" step) — tap up to 4 `AVAILABLE` seats directly, reserve, then pay (mock) or cancel. Re-fetches after every action so status always reflects the server. |
-| `/profile` | — (local only) | Demo user id, and this browser's booking history (`useBookingHistory`). |
-| `/admin/sections` | `POST /api/admin/sections` | Section name must be unique (409 `SEAT-006` otherwise) |
-| `/admin/seats` | `POST /api/admin/sections/{sectionId}/seats` | Fills a `rowCount` x `seatsPerRow` grid; renders a preview grid (capped at 20x30) |
-| `/admin/games` | `POST /api/admin/games` | Also creates one `GameSeat` per existing `Seat`; `ticketOpenAt` must be before `startAt` (400 `GAME-001` otherwise) |
+| `/` | `GET /api/games` | Home: next-game hero, pending-payment and live summary, my bookings, today's games, upcoming games. |
+| `/booking` | `GET /api/games` | Game list with status filters; only `OPEN` games link to the seat map. |
+| `/booking/:gameId` | `GET /api/games/{id}`, `.../seats`, `.../sections`, `POST .../reservations`, `POST /api/reservations/{id}/payments`, `POST /api/reservations/{id}/cancel` | Stadium map with zone focus, selected-seat bar fixed to the bottom. Re-fetches after every action so status reflects the server. |
+| `/schedule` | `GET /api/games` | Team picker and that team's schedule. Teams are derived from the game list. |
+| `/profile` | `GET /api/games` (for dates), `POST /api/reservations/{id}/cancel` | This browser's booking history with stats, status filters, and cancel for unfinished bookings. |
 
 ## Running locally
 
