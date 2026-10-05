@@ -27,7 +27,9 @@ export function Layout() {
   // 좌석 지도 화면은 하단에 예매·결제 바가 떠 있어서 탭 바와 겹치지 않게 숨긴다.
   const onSeatMap = /^\/booking\/\d+/.test(pathname)
   // 헤더는 항상 화면 전체 폭을 쓴다. 본문은 글 위주 화면만 읽기 폭으로 제한하고, 좌석 지도는 전체를 쓴다.
-  const contentClass = onSeatMap ? 'w-full px-4 py-6 sm:px-6 lg:px-10' : 'mx-auto max-w-3xl px-4 py-8 pb-24 sm:pb-8'
+  // 홈과 좌석 지도는 화면 폭을 다 쓰고, 글 위주 화면만 읽기 폭으로 제한한다.
+  const wide = onSeatMap || pathname === '/'
+  const contentClass = wide ? 'w-full px-4 py-6 pb-24 sm:px-6 sm:pb-8 lg:px-10' : 'mx-auto max-w-3xl px-4 py-8 pb-24 sm:pb-8'
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-50">

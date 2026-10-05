@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { listGames } from '../api/booking'
 import type { GameSummaryResponse } from '../api/types'
 import { EventBanner } from '../components/EventBanner'
-import { GameCard } from '../components/GameCard'
+import { GameTile } from '../components/GameTile'
 import { LiveGames } from '../components/LiveGames'
 import { Skeleton, SkeletonList } from '../components/Skeleton'
 import { useBookingHistory, type BookingHistoryEntry } from '../hooks/useBookingHistory'
@@ -39,48 +39,58 @@ function dateLabel(iso: string) {
   return new Date(iso).toLocaleString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })
 }
 
-function TeamPair({ home, away, size = 'size-10' }: { home: string; away: string; size?: string }) {
-  return (
-    <div className="flex -space-x-2">
-      {[home, away].map((team) => (
-        <span
-          key={team}
-          className={`flex ${size} items-center justify-center rounded-full border-2 border-white text-xs font-bold text-white dark:border-slate-900`}
-          style={{ backgroundColor: teamColor(team) }}
-        >
-          {teamInitial(team)}
-        </span>
-      ))}
-    </div>
-  )
-}
-
-/** 가장 가까운 예정 경기를 크게 보여준다. 팀 색으로 배경을 채운다. */
+/** 가장 가까운 예정 경기를 크게 보여준다. 두 팀 색으로 배경을 채우고 D-day와 상태를 올린다. */
 function NextGameHero({ game, now }: { game: GameSummaryResponse; now: Date }) {
   const days = dayDiff(game.startAt, now)
-  const dday = days === 0 ? 'D-DAY' : `D-${days}`
+  const dday = days === 0 ? 'D-DAY' : days > 0 ? `D-${days}` : '지난 경기'
+  const open = game.status === 'OPEN'
   return (
     <Link
-      to={game.status === 'OPEN' ? `/booking/${game.id}` : '/schedule'}
-      className="press group relative block overflow-hidden rounded-3xl p-6 text-white shadow-lg shadow-slate-900/10"
+      to={open ? `/booking/${game.id}` : '/schedule'}
+      className="press group relative block overflow-hidden rounded-3xl p-6 text-white shadow-lg shadow-slate-900/10 sm:p-8"
       style={{
         backgroundImage: `linear-gradient(135deg, ${teamColor(game.homeTeam)}, ${teamColor(game.awayTeam)})`,
       }}
     >
-      <span className="absolute -right-10 -top-10 size-44 rounded-full bg-white/10 transition-transform duration-500 group-hover:scale-110" />
-      <div className="relative flex items-start justify-between gap-4">
+      <span className="absolute -right-16 -top-16 size-64 rounded-full bg-white/10 transition-transform duration-700 group-hover:scale-110" />
+      <span className="absolute -bottom-20 left-1/3 size-48 rounded-full bg-white/5 transition-transform duration-700 group-hover:scale-110" />
+
+      <div className="relative flex flex-wrap items-center gap-2">
+        <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-bold backdrop-blur">다음 경기</span>
+        <span className="tabular rounded-full bg-white/20 px-3 py-1 text-xs font-extrabold backdrop-blur">{dday}</span>
+        <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold backdrop-blur">
+          {open ? '예매 중' : '예매 전'}
+        </span>
+      </div>
+
+      <div className="relative mt-6 flex items-center justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-xs font-semibold text-white/80">다음 경기 · {dateLabel(game.startAt)} {timeLabel(game.startAt)}</p>
-          <p className="mt-2 truncate text-2xl font-extrabold tracking-tight">
-            {game.homeTeam} <span className="text-white/60">vs</span> {game.awayTeam}
+          <p className="tabular text-sm font-semibold text-white/80">
+            {dateLabel(game.startAt)} · {timeLabel(game.startAt)}
+          </p>
+          <p className="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">
+            <span className="block truncate">{game.homeTeam}</span>
+            <span className="my-1 block text-base font-semibold text-white/60">vs</span>
+            <span className="block truncate">{game.awayTeam}</span>
           </p>
         </div>
-        <span className="tabular shrink-0 rounded-full bg-white/20 px-3 py-1 text-sm font-extrabold backdrop-blur">{dday}</span>
+        <div className="flex shrink-0 -space-x-3">
+          {[game.homeTeam, game.awayTeam].map((team) => (
+            <span
+              key={team}
+              className="flex size-16 items-center justify-center rounded-full border-4 border-white/30 text-lg font-extrabold text-white"
+              style={{ backgroundColor: 'rgba(0,0,0,0.18)' }}
+            >
+              {teamInitial(team)}
+            </span>
+          ))}
+        </div>
       </div>
-      <div className="relative mt-6 flex items-center justify-between">
-        <TeamPair home={game.homeTeam} away={game.awayTeam} size="size-12" />
-        <span className="inline-flex items-center gap-1 text-sm font-bold">
-          {game.status === 'OPEN' ? '좌석 고르러 가기' : '일정 보기'}
+
+      <div className="relative mt-8 flex items-center justify-between">
+        <span className="text-sm text-white/80">홈 {game.homeTeam} · 원정 {game.awayTeam}</span>
+        <span className="inline-flex items-center gap-1 rounded-full bg-white px-4 py-2 text-sm font-bold text-slate-900">
+          {open ? '좌석 고르러 가기' : '일정 보기'}
           <span aria-hidden className="transition-transform group-hover:translate-x-1">→</span>
         </span>
       </div>
@@ -90,28 +100,75 @@ function NextGameHero({ game, now }: { game: GameSummaryResponse; now: Date }) {
 
 /** 이 브라우저에서 한 예매. 서버 최신 상태와 다를 수 있어서 이 기기 기록이라는 점은 마이페이지에서 설명한다. */
 function MyReservationCard({ entry, game }: { entry: BookingHistoryEntry; game?: GameSummaryResponse }) {
-  const badge =
-    entry.status === 'CONFIRMED'
-      ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
-      : 'bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300'
-  const label = entry.status === 'CONFIRMED' ? '예매 완료' : '결제 대기'
+  const confirmed = entry.status === 'CONFIRMED'
   return (
     <Link
       to={`/booking/${entry.gameId}`}
-      className="press flex w-64 shrink-0 snap-start flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 transition-colors hover:border-blue-300 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-700"
+      className="press group flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 transition-all hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-700"
     >
       <div className="flex items-center justify-between">
-        <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${badge}`}>{label}</span>
-        <span className="tabular text-xs text-slate-500">좌석 {entry.seatCount}석</span>
+        <span
+          className={[
+            'flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold',
+            confirmed
+              ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+              : 'bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300',
+          ].join(' ')}
+        >
+          <span className={`size-1.5 rounded-full ${confirmed ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+          {confirmed ? '예매 완료' : '결제 대기'}
+        </span>
+        <span className="tabular text-xs text-slate-500">예약 #{entry.reservationId}</span>
       </div>
+
       <div className="min-w-0">
-        <p className="truncate font-bold">
-          {entry.homeTeam} <span className="text-slate-400">vs</span> {entry.awayTeam}
+        <p className="truncate text-lg font-extrabold">
+          {entry.homeTeam} <span className="text-sm font-semibold text-slate-400">vs</span> {entry.awayTeam}
         </p>
-        {game && <p className="tabular mt-1 text-sm text-slate-500">{dateLabel(game.startAt)} {timeLabel(game.startAt)}</p>}
+        {game && (
+          <p className="tabular mt-1 text-sm text-slate-500">
+            {dateLabel(game.startAt)} · {timeLabel(game.startAt)}
+          </p>
+        )}
       </div>
-      <p className="tabular text-sm font-semibold">{entry.totalPrice.toLocaleString()}원</p>
+
+      <div className="flex items-end justify-between border-t border-slate-100 pt-4 dark:border-slate-800">
+        <div>
+          <p className="text-xs text-slate-500">좌석</p>
+          <p className="tabular font-bold">{entry.seatCount}석</p>
+        </div>
+        <div className="text-right">
+          <p className="text-xs text-slate-500">결제 금액</p>
+          <p className="tabular font-bold">{entry.totalPrice.toLocaleString()}원</p>
+        </div>
+      </div>
     </Link>
+  )
+}
+
+function Panel({
+  title,
+  action,
+  children,
+  className = '',
+}: {
+  title: string
+  action?: { to: string; label: string }
+  children: ReactNode
+  className?: string
+}) {
+  return (
+    <section className={`animate-fade-up space-y-3 ${className}`}>
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-lg font-bold">{title}</h2>
+        {action && (
+          <Link to={action.to} className="text-sm font-medium text-slate-500 transition-colors hover:text-blue-600">
+            {action.label}
+          </Link>
+        )}
+      </div>
+      {children}
+    </section>
   )
 }
 
@@ -119,11 +176,16 @@ function QuickLink({ to, emoji, title, description }: { to: string; emoji: strin
   return (
     <Link
       to={to}
-      className="press rounded-2xl border border-slate-200 bg-white p-4 hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-700"
+      className="press group flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 transition-all hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-700"
     >
-      <p className="text-2xl">{emoji}</p>
-      <p className="mt-2 font-semibold">{title}</p>
-      <p className="text-xs text-slate-500">{description}</p>
+      <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-2xl dark:bg-slate-800">
+        {emoji}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="font-bold">{title}</p>
+        <p className="text-sm text-slate-500">{description}</p>
+      </div>
+      <span aria-hidden className="text-slate-400 transition-transform group-hover:translate-x-1">→</span>
     </Link>
   )
 }
@@ -143,112 +205,98 @@ export function HomePage() {
     .filter((game) => new Date(game.startAt) >= now || sameDay(new Date(game.startAt), now))
     .sort((a, b) => a.startAt.localeCompare(b.startAt))
   const next = upcoming[0]
-  const todays = games.filter((game) => sameDay(new Date(game.startAt), now)).sort((a, b) => a.startAt.localeCompare(b.startAt))
+  const todays = games
+    .filter((game) => sameDay(new Date(game.startAt), now))
+    .sort((a, b) => a.startAt.localeCompare(b.startAt))
   // 진행 중인 경기: 예정 경기 중 가장 가까운 2경기를 지금 중계 중인 것으로 취급한다(시뮬레이션).
   const live = upcoming.slice(0, 2)
   const myActive = entries.filter((entry) => entry.status !== 'CANCELLED')
 
   return (
-    <div className="space-y-10">
-      <section className="animate-fade-up space-y-1">
-        <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">{greeting(now.getHours())}</p>
-        <h1 className="text-3xl font-extrabold tracking-tight">야구장</h1>
-      </section>
+    <div className="space-y-8">
+      <header className="animate-fade-up flex flex-wrap items-end justify-between gap-4">
+        <div className="space-y-1">
+          <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">{greeting(now.getHours())}</p>
+          <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">야구장</h1>
+        </div>
+        <p className="tabular text-sm text-slate-500">{dateLabel(now.toISOString())}</p>
+      </header>
 
-      {live.length > 0 && (
-        <section className="animate-fade-up space-y-3 [animation-delay:40ms]">
-          <h2 className="text-lg font-bold">지금 진행 중</h2>
-          <LiveGames games={live} />
-        </section>
-      )}
-
-      <section className="animate-fade-up [animation-delay:60ms]">
-        {isPending && <Skeleton className="h-48" />}
-        {next && <NextGameHero game={next} now={now} />}
-        {data && !next && (
-          <p className="rounded-3xl border border-dashed border-slate-200 p-8 text-center text-sm text-slate-500 dark:border-slate-700">
-            곧 열리는 경기가 없어요. 새 일정이 올라오면 여기서 먼저 알려드릴게요.
-          </p>
-        )}
-      </section>
-
-      <section className="animate-fade-up space-y-3 [animation-delay:100ms]">
-        <div className="flex items-baseline justify-between">
-          <h2 className="text-lg font-bold">내 예매</h2>
-          {myActive.length > 0 && (
-            <Link to="/profile" className="text-sm font-medium text-slate-500 transition-colors hover:text-blue-600">
-              전체 보기
-            </Link>
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="min-w-0 space-y-6 lg:col-span-2">
+          {isPending && <Skeleton className="h-64" />}
+          {next && <NextGameHero game={next} now={now} />}
+          {data && !next && (
+            <p className="rounded-3xl border border-dashed border-slate-200 p-10 text-center text-sm text-slate-500 dark:border-slate-700">
+              곧 열리는 경기가 없어요. 새 일정이 올라오면 여기서 먼저 알려드릴게요.
+            </p>
           )}
-        </div>
-        {myActive.length === 0 ? (
-          <Link
-            to="/booking"
-            className="flex items-center justify-between rounded-2xl border border-dashed border-slate-200 p-5 text-sm text-slate-500 transition-colors hover:border-blue-300 hover:text-blue-600 dark:border-slate-700"
+
+          <Panel
+            title="내 예매"
+            action={myActive.length > 0 ? { to: '/profile', label: '전체 보기' } : undefined}
           >
-            <span>아직 예매한 경기가 없어요</span>
-            <span aria-hidden>→</span>
-          </Link>
-        ) : (
-          <div className="scrollbar-none -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1">
-            {myActive.map((entry) => (
-              <MyReservationCard key={entry.reservationId} entry={entry} game={byId.get(entry.gameId)} />
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section className="animate-fade-up space-y-3 [animation-delay:140ms]">
-        <div className="flex items-baseline justify-between">
-          <h2 className="text-lg font-bold">오늘의 경기</h2>
-          <p className="tabular text-xs text-slate-500">{dateLabel(now.toISOString())}</p>
-        </div>
-        {todays.length === 0 ? (
-          <p className="rounded-2xl bg-white p-5 text-sm text-slate-500 dark:bg-slate-900">오늘은 예정된 경기가 없어요.</p>
-        ) : (
-          <div className="space-y-2">
-            {todays.map((game) => (
-              <div key={game.id} className="flex items-center gap-3">
-                <span className="tabular w-12 shrink-0 text-right text-sm font-bold">{timeLabel(game.startAt)}</span>
-                <div className="min-w-0 flex-1">
-                  <GameCard game={game} />
-                </div>
+            {myActive.length === 0 ? (
+              <Link
+                to="/booking"
+                className="flex items-center justify-between rounded-2xl border border-dashed border-slate-200 p-6 text-sm text-slate-500 transition-colors hover:border-blue-300 hover:text-blue-600 dark:border-slate-700"
+              >
+                <span>아직 예매한 경기가 없어요. 좌석을 골라 첫 예매를 해 보세요.</span>
+                <span aria-hidden>→</span>
+              </Link>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {myActive.map((entry) => (
+                  <MyReservationCard key={entry.reservationId} entry={entry} game={byId.get(entry.gameId)} />
+                ))}
               </div>
-            ))}
-          </div>
-        )}
-      </section>
+            )}
+          </Panel>
 
-      <section className="animate-fade-up [animation-delay:180ms]">
-        <EventBanner />
-      </section>
-
-      <section className="animate-fade-up space-y-3 [animation-delay:220ms]">
-        <div className="flex items-baseline justify-between">
-          <h2 className="text-lg font-bold">다가오는 경기</h2>
-          <Link to="/booking" className="text-sm font-medium text-slate-500 transition-colors hover:text-blue-600">
-            전체 보기
-          </Link>
-        </div>
-        {isPending && <SkeletonList count={3} />}
-        {data && upcoming.length === 0 && (
-          <p className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500 dark:border-slate-700">
-            아직 열린 경기가 없어요.
-          </p>
-        )}
-        <div className="space-y-2">
-          {upcoming.slice(0, 5).map((game, index) => (
-            <div key={game.id} className="animate-fade-up" style={{ animationDelay: `${260 + index * 60}ms` }}>
-              <GameCard game={game} />
+          <Panel title="다가오는 경기" action={{ to: '/booking', label: '전체 보기' }}>
+            {isPending && <SkeletonList count={3} />}
+            {data && upcoming.length === 0 && (
+              <p className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500 dark:border-slate-700">
+                아직 열린 경기가 없어요.
+              </p>
+            )}
+            <div className="grid gap-3 sm:grid-cols-2">
+              {upcoming.slice(0, 6).map((game, index) => (
+                <div key={game.id} className="animate-fade-up" style={{ animationDelay: `${index * 50}ms` }}>
+                  <GameTile game={game} now={now} />
+                </div>
+              ))}
             </div>
-          ))}
+          </Panel>
         </div>
-      </section>
 
-      <section className="animate-fade-up grid grid-cols-3 gap-3 [animation-delay:300ms]">
-        <QuickLink to="/booking" emoji="🎟️" title="예매하기" description="좌석 고르고 결제" />
-        <QuickLink to="/schedule" emoji="📅" title="팀별 일정" description="응원 팀 경기" />
-        <QuickLink to="/profile" emoji="🙋" title="마이페이지" description="내 예매 확인" />
+        <aside className="min-w-0 space-y-6">
+          {live.length > 0 && (
+            <Panel title="지금 진행 중">
+              <LiveGames games={live} />
+            </Panel>
+          )}
+
+          <Panel title="오늘의 경기" action={{ to: '/schedule', label: '일정' }}>
+            {todays.length === 0 ? (
+              <p className="rounded-2xl bg-white p-5 text-sm text-slate-500 dark:bg-slate-900">오늘은 예정된 경기가 없어요.</p>
+            ) : (
+              <div className="grid gap-2">
+                {todays.map((game) => (
+                  <GameTile key={game.id} game={game} now={now} />
+                ))}
+              </div>
+            )}
+          </Panel>
+
+          <EventBanner />
+        </aside>
+      </div>
+
+      <section className="animate-fade-up grid gap-3 sm:grid-cols-3">
+        <QuickLink to="/booking" emoji="🎟️" title="예매하기" description="좌석 고르고 결제까지" />
+        <QuickLink to="/schedule" emoji="📅" title="팀별 일정" description="응원 팀 경기 보기" />
+        <QuickLink to="/profile" emoji="🙋" title="마이페이지" description="내 예매 확인하기" />
       </section>
     </div>
   )
