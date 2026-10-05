@@ -168,7 +168,12 @@ export function LiveTimeline({ events, team }: { events: LiveEventResponse[]; te
   const newestFirst = [...entries].reverse()
 
   return (
-    <div ref={boxRef} className="h-[560px] overflow-y-auto rounded-3xl border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-4 pb-8 dark:border-slate-800 dark:from-slate-900 dark:to-slate-950">
+    <div
+      ref={boxRef}
+      className="h-[min(560px,70svh)] overflow-y-auto overscroll-contain rounded-3xl border border-slate-200 bg-gradient-to-b from-slate-50 to-white px-4 dark:border-slate-800 dark:from-slate-900 dark:to-slate-950"
+    >
+      {/* 위·아래 여백은 상자 높이의 절반에서 카드 높이의 절반을 뺀 만큼이다. 그래야 맨 위·맨 아래 카드도 가운데 줄까지 올라온다. */}
+      <div aria-hidden style={{ height: `calc(50% - ${CARD_HEIGHT / 2}px)` }} />
       {newestFirst.map((entry, index) => (
         // 새 기록은 위에 있고, 뒤에 오는 카드는 앞 카드 밑에 겹쳐서 아래 띠만 보인다. 스크롤하면 뒤 카드가 올라온다.
         <div
@@ -186,6 +191,7 @@ export function LiveTimeline({ events, team }: { events: LiveEventResponse[]; te
           </div>
         </div>
       ))}
+      <div aria-hidden style={{ height: `calc(50% - ${CARD_HEIGHT / 2}px)` }} />
     </div>
   )
 }
