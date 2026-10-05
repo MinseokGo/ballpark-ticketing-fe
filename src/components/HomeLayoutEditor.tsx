@@ -56,7 +56,7 @@ export function HomeLayoutEditor({
             <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">홈 레이아웃</p>
             <h2 className="text-xl font-extrabold">위젯 옮기기 · 크기 정하기</h2>
             <p className="mt-1 text-xs text-slate-500">
-              위젯 상단을 끌어서 옮깁니다. 맨 아래 빈 줄에 놓으면 맨 뒤로 갑니다. 크기는 아래 패널에서 고르세요.
+              위젯 어디든 끌어서 옮깁니다. 맨 아래 빈 줄에 놓으면 맨 뒤로 갑니다. 크기는 아래 패널에서 고르세요.
             </p>
           </div>
           <button
@@ -82,6 +82,13 @@ export function HomeLayoutEditor({
             {placed.map((item) => (
               <div
                 key={item.id}
+                draggable
+                onDragStart={(event) => {
+                  setDragId(item.id)
+                  event.dataTransfer.effectAllowed = 'move'
+                  event.dataTransfer.setData('text/plain', item.id)
+                }}
+                onDragEnd={endDrag}
                 onDragOver={(event) => {
                   event.preventDefault()
                   if (dragId && dragId !== item.id) setOverId(item.id)
@@ -93,7 +100,7 @@ export function HomeLayoutEditor({
                   endDrag()
                 }}
                 className={[
-                  'absolute flex flex-col overflow-hidden rounded-2xl border bg-white shadow-sm transition-[box-shadow,opacity] dark:bg-slate-800',
+                  'absolute flex cursor-grab flex-col overflow-hidden rounded-2xl border bg-white shadow-sm transition-[box-shadow,opacity] active:cursor-grabbing dark:bg-slate-800',
                   overId === item.id ? 'border-blue-400 ring-2 ring-blue-400' : 'border-slate-300 dark:border-slate-600',
                   dragId === item.id ? 'opacity-50' : '',
                 ].join(' ')}
@@ -104,16 +111,7 @@ export function HomeLayoutEditor({
                   height: item.h * CELL_H - GAP,
                 }}
               >
-                <div
-                  draggable
-                  onDragStart={(event) => {
-                    setDragId(item.id)
-                    event.dataTransfer.effectAllowed = 'move'
-                    event.dataTransfer.setData('text/plain', item.id)
-                  }}
-                  onDragEnd={endDrag}
-                  className="flex shrink-0 cursor-grab items-center justify-between gap-2 border-b border-slate-200 bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-600 active:cursor-grabbing dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
-                >
+                <div className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-200 bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-600 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200">
                   <span className="truncate">⠿ {labels[item.id]}</span>
                   <span className="tabular shrink-0 font-semibold text-slate-400">
                     {item.w}×{item.h}
