@@ -207,27 +207,28 @@ export function HomePage() {
         <p className="tabular text-sm text-slate-500">{dateLabel(now.toISOString())}</p>
       </header>
 
-      {/* 자주 쓰는 동작은 헤더 바로 아래 한 줄에 둔다. */}
-      <nav className="animate-fade-up grid grid-cols-3 gap-2 [animation-delay:40ms] sm:flex sm:flex-wrap">
-        <ActionPill to="/booking" emoji="🎟️" label="예매하기" primary />
-        <ActionPill to="/schedule" emoji="📅" label="팀별 일정" />
-        <ActionPill to="/profile" emoji="🙋" label="마이페이지" />
-      </nav>
-
-      {pending.length > 0 && (
-        <Link
-          to={`/booking/${pending[0].gameId}`}
-          className="animate-fade-up press flex items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200"
-        >
-          <span className="flex items-center gap-3">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-amber-500 text-white">!</span>
-            <span className="font-semibold">
-              결제가 아직 끝나지 않은 예매가 {pending.length}건 있어요.
-            </span>
-          </span>
-          <span aria-hidden className="shrink-0 font-bold">결제하러 가기 →</span>
-        </Link>
-      )}
+      {/* 한 줄 요약: 결제 대기·내 예매·오늘 경기·진행 중 개수를 칩으로, 자주 쓰는 동작을 오른쪽에 둔다. */}
+      <div className="animate-fade-up flex flex-col gap-3 [animation-delay:40ms] sm:flex-row sm:items-center sm:justify-between">
+        <div className="scrollbar-none -mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0">
+          {pending.length > 0 && (
+            <Link
+              to={`/booking/${pending[0].gameId}`}
+              className="press flex shrink-0 items-center gap-2 rounded-full bg-amber-500 px-3.5 py-2 text-xs font-bold text-white shadow-sm shadow-amber-500/30"
+            >
+              결제 대기 {pending.length}건
+              <span aria-hidden>→</span>
+            </Link>
+          )}
+          <StatChip label="내 예매" value={myActive.length} />
+          <StatChip label="오늘 경기" value={todays.length} />
+          <StatChip label="진행 중" value={live.length} live />
+        </div>
+        <div className="grid grid-cols-3 gap-2 sm:flex">
+          <ActionPill to="/booking" emoji="🎟️" label="예매하기" primary />
+          <ActionPill to="/schedule" emoji="📅" label="팀별 일정" />
+          <ActionPill to="/profile" emoji="🙋" label="마이페이지" />
+        </div>
+      </div>
 
       {/* 1행: 다음 경기(넓게) + 지금 진행 중 */}
       <div className="grid gap-6 lg:grid-cols-3">
@@ -312,12 +313,22 @@ export function HomePage() {
   )
 }
 
+function StatChip({ label, value, live = false }: { label: string; value: number; live?: boolean }) {
+  return (
+    <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-900">
+      {live && <span className="size-1.5 rounded-full bg-red-500" />}
+      {label}
+      <span className="tabular font-bold text-slate-900 dark:text-slate-50">{value}</span>
+    </span>
+  )
+}
+
 function ActionPill({ to, emoji, label, primary = false }: { to: string; emoji: string; label: string; primary?: boolean }) {
   return (
     <Link
       to={to}
       className={[
-        'press flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold transition-colors sm:justify-start',
+        'press flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-colors',
         primary
           ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/30 hover:bg-blue-700'
           : 'border border-slate-200 bg-white hover:border-blue-300 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-700',
