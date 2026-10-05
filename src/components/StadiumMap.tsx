@@ -267,7 +267,8 @@ function zoneView(band: Band, w: number, h: number): View {
   const angle = ((band.fStart + band.fEnd) / 2) * (Math.PI / 180)
   const xc = CX + rMid * Math.sin(angle)
   const yc = CY - rMid * Math.cos(angle)
-  const zoom = clamp(60 / (band.bOuter - band.bInner), 2.2, 5)
+  // 구역을 고르면 그 구역이 화면을 크게 채우도록 줌인한다(구역이 얇을수록 더 많이 확대).
+  const zoom = clamp(90 / (band.bOuter - band.bInner), 3.5, 8)
   const k = Math.min(w / WORLD_W, h / WORLD_H) * zoom
   return clampView({ zoom, panX: -k * (xc - CX), panY: -k * VS * (yc - CY) }, w, h)
 }
@@ -350,20 +351,16 @@ function drawStadium(
   ctx.lineWidth = 1
   ctx.stroke()
 
-  // 구역 목록에서 고른 구역: 어떤 계열 색 위에서도 보이도록 흰 선 + 진한 선의 이중 테두리를 친다.
+  // 구역 목록에서 고른 구역: 테두리 없이 그 밖의 영역만 살짝 어둡게 덮는다. 고른 구역은 원래 밝기로 남아 강조된다.
   if (focusSectionId !== null) {
     const band = layout.bands.find((b) => b.sectionId === focusSectionId)
     if (band) {
+      const shade = new Path2D()
+      shade.rect(-300, -300, 900, 900)
+      shade.addPath(band.outline)
       ctx.globalAlpha = 1
-      ctx.lineJoin = 'round'
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.08)'
-      ctx.fill(band.outline)
-      ctx.strokeStyle = '#FFFFFF'
-      ctx.lineWidth = 4
-      ctx.stroke(band.outline)
-      ctx.strokeStyle = '#0F172A'
-      ctx.lineWidth = 1.8
-      ctx.stroke(band.outline)
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.42)'
+      ctx.fill(shade, 'evenodd')
     }
   }
 
