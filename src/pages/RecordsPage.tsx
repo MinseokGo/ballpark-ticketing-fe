@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { listGames } from '../api/booking'
+import { listAllGames } from '../api/booking'
 import { Skeleton } from '../components/Skeleton'
 import { winnerLabel } from '../lib/gameResult'
 import { formatKst } from '../lib/serverTime'
@@ -9,13 +8,12 @@ import { teamColor, teamInitial } from '../lib/teamColors'
 
 /** 끝난 경기 기록 목록. 카드를 누르면 그 경기의 전체 중계 기록과 채팅 기록을 본다. */
 export function RecordsPage() {
-  const [page] = useState(0)
   const { data, isPending, isError } = useQuery({
-    queryKey: ['games', 'finished', page],
-    queryFn: () => listGames(page, 50, 'FINISHED'),
+    queryKey: ['games', 'finished'],
+    queryFn: () => listAllGames('FINISHED'),
   })
 
-  const games = [...(data?.content ?? [])].sort((a, b) => b.startAt.localeCompare(a.startAt))
+  const games = [...(data ?? [])].sort((a, b) => b.startAt.localeCompare(a.startAt))
 
   return (
     <div className="space-y-6">

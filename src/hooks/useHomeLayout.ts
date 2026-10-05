@@ -50,7 +50,14 @@ export function useHomeLayout() {
     persist(next)
   }
 
+  /** from 위젯을 맨 뒤로 옮긴다(편집기 하단 드롭 영역). */
+  const moveToEnd = (from: HomeWidgetId) => {
+    const moving = items.find((item) => item.id === from)
+    if (!moving) return
+    persist([...items.filter((item) => item.id !== from), moving])
+  }
+
   const reset = () => persist(DEFAULT_ITEMS.map((item) => ({ ...item })))
 
-  return { items, setSize, move, reset }
+  return { items, setSize, move, moveToEnd, reset }
 }
