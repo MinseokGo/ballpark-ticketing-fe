@@ -5,11 +5,12 @@ type Team = { home: string; away: string }
 
 type Entry = { event: LiveEventResponse; prev: LiveEventResponse | null }
 
-/** 맨 위에 겹쳐 보이는 최신 카드 수. 나머지는 아래 목록으로 내려간다. */
-const DECK_SIZE = 4
+/** 카드 높이, 카드 사이 간격, 쌓일 때 한 장당 밀리는 간격. 맨 위에서 쌓이는 장수는 STACK_DEPTH로 제한한다. */
 const CARD_HEIGHT = 84
+const GAP = 12
 const STEP_Y = 14
-const STEP_SCALE = 0.04
+const STACK_DEPTH = 3
+const STEP_SCALE = 0.035
 
 const TONE: Record<string, { dot: string; text: string; chip: string }> = {
   GAME_STARTED: {
@@ -121,50 +122,33 @@ export function LiveTimeline({ events, team }: { events: LiveEventResponse[]; te
 
   const entries: Entry[] = events.map((event, index) => ({ event, prev: index > 0 ? events[index - 1] : null }))
   const newestFirst = [...entries].reverse()
-  const deck = newestFirst.slice(0, DECK_SIZE)
-  const archive = newestFirst.slice(DECK_SIZE)
 
   return (
     <div className="h-[560px] overflow-y-auto rounded-3xl border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-4 dark:border-slate-800 dark:from-slate-900 dark:to-slate-950">
-      <div className="depth-stage relative" style={{ height: CARD_HEIGHT + (DECK_SIZE - 1) * STEP_Y + 8 }}>
-        {deck.map((entry, index) => (
-          <div
-            key={entry.event.seq}
-            className="absolute inset-x-0 top-0 transition-[transform,opacity] duration-500 ease-out"
-            style={{
-              height: CARD_HEIGHT,
-              zIndex: DECK_SIZE - index,
-              opacity: 1 - index * 0.18,
-              transform: `translate3d(0, ${index * STEP_Y}px, ${-index * 30}px) scale(${1 - index * STEP_SCALE})`,
-              transformOrigin: 'center top',
-            }}
-          >
-            {/* 새 카드는 멀리서 다가오는 등장을 한 번 한다. 이미 있던 카드는 key가 같아서 다시 움직이지 않는다. */}
-            <div className={index === 0 ? 'animate-rise h-full' : 'h-full'}>
-              <EventCard entry={entry} team={names} />
+      {newestFirst.map((entry, index) => {
+        // 각 카드는 자기 칸을 차지하고, 스크롤로 그 칸을 지나갈 때 위에 붙어 쌓인다.
+        // 최신 카드가 가장 위·가장 앞에 있고, 뒤에 오는 카드는 한 칸씩 밀리고 작아진다.
+        const depth = Math.min(index, STACK_DEPTH)
+        return (
+          <div key={entry.event.seq} style={{ height: CARD_HEIGHT + GAP }}>
+            <div
+              className="sticky transition-[transform,opacity] duration-500 ease-out"
+              style={{
+                top: depth * STEP_Y,
+                height: CARD_HEIGHT,
+                zIndex: 100 - index,
+                transform: `scale(${1 - depth * STEP_SCALE})`,
+                transformOrigin: 'center top',
+              }}
+            >
+              {/* 새 카드만 멀리서 다가오는 등장을 한다. 이미 있던 카드는 key가 같아서 다시 움직이지 않는다. */}
+              <div className={index === 0 ? 'animate-rise h-full' : 'h-full'}>
+                <EventCard entry={entry} team={names} />
+              </div>
             </div>
           </div>
-        ))}
-      </div>
-
-      {archive.length > 0 && (
-        <ol className="mt-3 space-y-2">
-          {archive.map((entry) => (
-            <li
-              key={entry.event.seq}
-              className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-600 hover:bg-white dark:text-slate-400 dark:hover:bg-slate-900"
-            >
-              <span className={`size-1.5 shrink-0 rounded-full ${(TONE[entry.event.type] ?? TONE.GAME_STARTED).dot}`} />
-              <span className="min-w-0 flex-1 truncate">
-                {inningLabel(entry.event)} · {titleOf(entry.event, entry.prev, names)}
-              </span>
-              <span className="tabular shrink-0 text-xs font-semibold">
-                {entry.event.homeScore} : {entry.event.awayScore}
-              </span>
-            </li>
-          ))}
-        </ol>
-      )}
+        )
+      })}
     </div>
   )
 }
