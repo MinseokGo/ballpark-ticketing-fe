@@ -178,6 +178,8 @@ export function HomePage() {
   const { data, isPending } = useQuery({
     queryKey: ['games', 0, GAME_LIMIT],
     queryFn: () => listGames(0, GAME_LIMIT),
+    // 경기가 진행 중으로 바뀌거나 끝나는 것을 페이지를 새로 열지 않고도 보이도록 주기적으로 받는다.
+    refetchInterval: 15_000,
   })
 
   const games = data?.content ?? []

@@ -21,6 +21,7 @@ export function BookingGamesPage() {
   const { data, isPending, isError } = useQuery({
     queryKey: ['games', 0, 50],
     queryFn: () => listGames(0, 50),
+    refetchInterval: 15_000,
   })
 
   const games = (data?.content ?? [])
