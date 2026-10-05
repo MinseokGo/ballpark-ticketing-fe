@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
   cancelReservation,
@@ -20,6 +20,7 @@ import { SelectedSeatsBar, type SelectedSeat } from '../components/SelectedSeats
 import { ZoneLegend } from '../components/ZoneLegend'
 import { useBookingHistory } from '../hooks/useBookingHistory'
 import { useLiveBroadcast, useLiveState } from '../hooks/useLiveGame'
+import { useSeatStream } from '../hooks/useSeatStream'
 import { CURRENT_USER_ID } from '../constants'
 import { teamColor } from '../lib/teamColors'
 import type { ReservationResponse, SeatMapItemResponse } from '../api/types'
@@ -101,6 +102,29 @@ export function BookingSeatMapPage() {
       recordHistory(cancelled)
       refetchAll()
     },
+  })
+
+  // 다른 사용자가 고른 좌석이 실시간으로 바뀌면, 내가 고른 목록에서 뺀다. 내 예약 응답을 기다리는 중의 변화는 내 것이라 무시한다.
+  const selectedRef = useRef(selectedSeatIds)
+  useEffect(() => {
+    selectedRef.current = selectedSeatIds
+  }, [selectedSeatIds])
+  const [notice, setNotice] = useState<string | null>(null)
+  useEffect(() => {
+    if (!notice) return
+    const timer = window.setTimeout(() => setNotice(null), 5000)
+    return () => window.clearTimeout(timer)
+  }, [notice])
+  const seatLive = useSeatStream(gameId, (changes) => {
+    if (reserveMutation.isPending) return
+    const taken = changes.filter((change) => change.status !== 'AVAILABLE' && selectedRef.current.has(change.gameSeatId))
+    if (taken.length === 0) return
+    setSelectedSeatIds((prev) => {
+      const next = new Set(prev)
+      taken.forEach((change) => next.delete(change.gameSeatId))
+      return next
+    })
+    setNotice(`방금 다른 사용자가 고른 좌석 ${taken.length}석이 빠졌어요. 다시 골라 주세요.`)
   })
 
   const toggleSeat = (gameSeatId: number) => {
@@ -198,6 +222,18 @@ export function BookingSeatMapPage() {
 
       {game && <GameScoreBanner game={game} live={liveQuery.data} streaming={streaming} />}
 
+      {notice && (
+        <div
+          role="status"
+          className="animate-fade-up flex items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200"
+        >
+          <span>{notice}</span>
+          <button type="button" onClick={() => setNotice(null)} aria-label="알림 닫기" className="shrink-0 text-amber-700 dark:text-amber-300">
+            ✕
+          </button>
+        </div>
+      )}
+
       <div className="space-y-6 lg:grid lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start lg:gap-6 lg:space-y-0">
         {stadiumSections.length > 0 && (
         <div className="overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-b from-sky-50 via-white to-white p-3 shadow-sm dark:border-slate-800 dark:from-slate-900 dark:via-slate-900 dark:to-slate-950">
@@ -207,7 +243,7 @@ export function BookingSeatMapPage() {
             onToggle={toggleSeat}
             focus={focus}
           />
-          <p className="pb-2 text-center text-xs text-slate-500">드래그로 옮기고, 두 손가락이나 휠로 확대해 좌석을 고르세요</p>
+          <p className="pb-2 text-center text-xs text-slate-500">드래그로 옮기고, 두 손가락이나 휠로 확대해 좌석을 고르세요{seatLive ? ' · 좌석 실시간 반영 중' : ''}</p>
         </div>
       )}
 
