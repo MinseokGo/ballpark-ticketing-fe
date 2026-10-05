@@ -1,6 +1,7 @@
 import { apiGet, apiPost } from './client'
 import type {
   ChatMessageResponse,
+  GameProgress,
   GameResponse,
   LiveStateResponse,
   GameSummaryResponse,
@@ -13,8 +14,13 @@ import type {
   SectionAvailabilityResponse,
 } from './types'
 
-export function listGames(page: number, size: number): Promise<PageResponse<GameSummaryResponse>> {
-  return apiGet<PageResponse<GameSummaryResponse>>(`/api/games?page=${page}&size=${size}`)
+export function listGames(
+  page: number,
+  size: number,
+  progress?: GameProgress,
+): Promise<PageResponse<GameSummaryResponse>> {
+  const filter = progress ? `&progress=${progress}` : ''
+  return apiGet<PageResponse<GameSummaryResponse>>(`/api/games?page=${page}&size=${size}${filter}`)
 }
 
 export function getGame(gameId: number): Promise<GameResponse> {

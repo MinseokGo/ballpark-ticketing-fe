@@ -68,6 +68,7 @@ function titleOf(event: LiveEventResponse, prev: LiveEventResponse | null, team:
     case 'INNING_CHANGED':
       return `${event.inning}회 ${event.half === 'TOP' ? '초' : '말'} 공격 시작`
     case 'SCORE_CHANGED': {
+      if (event.playerName) return `${event.playerName} · ${event.detail ?? '득점'}`
       const who = scoringTeam(event, prev, team)
       return who ? `${who} 득점` : '득점'
     }
@@ -90,6 +91,7 @@ function EventCard({ entry, team }: { entry: Entry; team: Team }) {
       <div className="flex items-center gap-2">
         <span className={`size-2 shrink-0 rounded-full ${tone.dot}`} />
         <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${tone.chip}`}>{inningLabel(event)}</span>
+        {event.teamName && <span className="truncate text-[11px] font-medium text-slate-500">{event.teamName}</span>}
         {event.createdAt && (
           <span className="tabular text-[11px] text-slate-500">
             {formatKst(event.createdAt, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
@@ -170,7 +172,7 @@ export function LiveTimeline({ events, team }: { events: LiveEventResponse[]; te
   return (
     <div
       ref={boxRef}
-      className="h-[min(560px,70svh)] overflow-y-auto overscroll-contain rounded-3xl border border-slate-200 bg-gradient-to-b from-slate-50 to-white px-4 dark:border-slate-800 dark:from-slate-900 dark:to-slate-950"
+      className="h-[min(560px,70svh)] overflow-y-auto overflow-x-hidden overscroll-contain rounded-3xl border border-slate-200 bg-gradient-to-b from-slate-50 to-white px-4 dark:border-slate-800 dark:from-slate-900 dark:to-slate-950"
     >
       {/* 위·아래 여백은 상자 높이의 절반에서 카드 높이의 절반을 뺀 만큼이다. 그래야 맨 위·맨 아래 카드도 가운데 줄까지 올라온다. */}
       <div aria-hidden style={{ height: `calc(50% - ${CARD_HEIGHT / 2}px)` }} />
