@@ -2,155 +2,23 @@ import { useQuery } from '@tanstack/react-query'
 import { useState, type CSSProperties, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { listAllGames } from '../api/booking'
-import type { GameSummaryResponse } from '../api/types'
 import { EventBanner } from '../components/EventBanner'
 import { GameTile } from '../components/GameTile'
 import { LiveGames } from '../components/LiveGames'
 import { Skeleton, SkeletonList } from '../components/Skeleton'
 import { ScrollBox } from '../components/ScrollBox'
 import { StandingsCompact } from '../components/StandingsTable'
-import { useBookingHistory, type BookingHistoryEntry } from '../hooks/useBookingHistory'
+import { useBookingHistory } from '../hooks/useBookingHistory'
 import { useHomeLayout } from '../hooks/useHomeLayout'
 import { useStandings } from '../hooks/useStandings'
 import { packLayout, type HomeWidgetId } from '../lib/homeGrid'
 import { HomeLayoutEditor } from '../components/HomeLayoutEditor'
-import { gameHref } from '../lib/gameRoutes'
-import { teamColor, teamInitial } from '../lib/teamColors'
-import { formatKst, kstDateKey, parseServerTime } from '../lib/serverTime'
-
-// 홈에서 쓰는 경기 목록 크기. 데모 데이터(5경기)는 전부 들어온다.
-
-function greeting(hour: number) {
-  if (hour < 12) return '좋은 아침이에요'
-  if (hour < 18) return '오늘 야구 보러 갈까요?'
-  return '오늘 저녁 경기 어때요?'
-}
-
-function sameDay(a: Date, b: Date) {
-  return kstDateKey(a) === kstDateKey(b)
-}
-
-/** 0 = 오늘, 1 = 내일 … 지난 날짜는 음수. 달력 날짜 기준으로 센다(시각 무시). */
-function dayDiff(iso: string, now: Date) {
-  const toUtc = (key: string) => Date.parse(`${key}T00:00:00Z`)
-  return Math.round((toUtc(kstDateKey(iso)) - toUtc(kstDateKey(now))) / 86_400_000)
-}
-
-function timeLabel(iso: string) {
-  return formatKst(iso, { hour: 'numeric', minute: '2-digit' })
-}
-
-function dateLabel(iso: string) {
-  return formatKst(iso, { month: 'long', day: 'numeric', weekday: 'short' })
-}
-
-/** 가장 가까운 예정 경기를 크게 보여준다. 두 팀 색으로 배경을 채우고 D-day와 상태를 올린다. */
-function NextGameHero({ game, now }: { game: GameSummaryResponse; now: Date }) {
-  const days = dayDiff(game.startAt, now)
-  const dday = days === 0 ? 'D-DAY' : days > 0 ? `D-${days}` : '지난 경기'
-  const open = game.status === 'OPEN'
-  return (
-    <Link
-      to={gameHref(game) ?? '/schedule'}
-      className="press group relative block h-full overflow-hidden rounded-3xl p-6 text-white shadow-lg shadow-slate-900/10 sm:p-8"
-      style={{
-        backgroundImage: `linear-gradient(135deg, ${teamColor(game.homeTeam)}, ${teamColor(game.awayTeam)})`,
-      }}
-    >
-      <span className="absolute -right-16 -top-16 size-64 rounded-full bg-white/10 transition-transform duration-700 group-hover:scale-110" />
-      <span className="absolute -bottom-20 left-1/3 size-48 rounded-full bg-white/5 transition-transform duration-700 group-hover:scale-110" />
-
-      <div className="relative flex flex-wrap items-center gap-2">
-        <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-bold backdrop-blur">다음 경기</span>
-        <span className="tabular rounded-full bg-white/20 px-3 py-1 text-xs font-extrabold backdrop-blur">{dday}</span>
-        <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold backdrop-blur">
-          {open ? '예매 중' : '예매 전'}
-        </span>
-      </div>
-
-      <div className="relative mt-6 flex items-center justify-between gap-4">
-        <div className="min-w-0">
-          <p className="tabular text-sm font-semibold text-white/80">
-            {dateLabel(game.startAt)} · {timeLabel(game.startAt)}
-          </p>
-          <p className="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">
-            <span className="block truncate">{game.homeTeam}</span>
-            <span className="my-1 block text-base font-semibold text-white/60">vs</span>
-            <span className="block truncate">{game.awayTeam}</span>
-          </p>
-        </div>
-        <div className="flex shrink-0 -space-x-3">
-          {[game.homeTeam, game.awayTeam].map((team) => (
-            <span
-              key={team}
-              className="flex size-16 items-center justify-center rounded-full border-4 border-white/30 text-lg font-extrabold text-white"
-              style={{ backgroundColor: 'rgba(0,0,0,0.18)' }}
-            >
-              {teamInitial(team)}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      <div className="relative mt-8 flex items-center justify-between">
-        <span className="text-sm text-white/80">홈 {game.homeTeam} · 원정 {game.awayTeam}</span>
-        <span className="inline-flex items-center gap-1 rounded-full bg-white px-4 py-2 text-sm font-bold text-slate-900">
-          {open ? '좌석 고르러 가기' : '일정 보기'}
-          <span aria-hidden className="transition-transform group-hover:translate-x-1">→</span>
-        </span>
-      </div>
-    </Link>
-  )
-}
-
-/** 이 브라우저에서 한 예매. 서버 최신 상태와 다를 수 있어서 이 기기 기록이라는 점은 마이페이지에서 설명한다. */
-function MyReservationCard({ entry, game }: { entry: BookingHistoryEntry; game?: GameSummaryResponse }) {
-  const confirmed = entry.status === 'CONFIRMED'
-  const href = (game && gameHref(game)) ?? `/booking/${entry.gameId}`
-  return (
-    <Link
-      to={href}
-      className="press group flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 transition-all hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-700"
-    >
-      <div className="flex items-center justify-between">
-        <span
-          className={[
-            'flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold',
-            confirmed
-              ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
-              : 'bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300',
-          ].join(' ')}
-        >
-          <span className={`size-1.5 rounded-full ${confirmed ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-          {confirmed ? '예매 완료' : '결제 대기'}
-        </span>
-        <span className="tabular text-xs text-slate-500">예약 #{entry.reservationId}</span>
-      </div>
-
-      <div className="min-w-0">
-        <p className="truncate text-lg font-extrabold">
-          {entry.homeTeam} <span className="text-sm font-semibold text-slate-400">vs</span> {entry.awayTeam}
-        </p>
-        {game && (
-          <p className="tabular mt-1 text-sm text-slate-500">
-            {dateLabel(game.startAt)} · {timeLabel(game.startAt)}
-          </p>
-        )}
-      </div>
-
-      <div className="flex items-end justify-between border-t border-slate-100 pt-4 dark:border-slate-800">
-        <div>
-          <p className="text-xs text-slate-500">좌석</p>
-          <p className="tabular font-bold">{entry.seatCount}석</p>
-        </div>
-        <div className="text-right">
-          <p className="text-xs text-slate-500">결제 금액</p>
-          <p className="tabular font-bold">{entry.totalPrice.toLocaleString()}원</p>
-        </div>
-      </div>
-    </Link>
-  )
-}
+import { parseServerTime } from '../lib/serverTime'
+import { NextGameHero } from '../components/home/NextGameHero'
+import { MyReservationCard } from '../components/home/MyReservationCard'
+import { Panel } from '../components/home/HomePanel'
+import { ActionPill, StatChip } from '../components/home/HomeChips'
+import { greeting, sameDay, dateLabel } from '../lib/gameDates'
 
 const WIDGET_LABELS: Record<HomeWidgetId, string> = {
   hero: '다음 경기',
@@ -161,34 +29,6 @@ const WIDGET_LABELS: Record<HomeWidgetId, string> = {
   recent: '최근 결과',
   upcoming: '다가오는 경기',
   events: '이벤트',
-}
-
-function Panel({
-  title,
-  action,
-  children,
-  className = '',
-}: {
-  title: string
-  action?: { to: string; label: string }
-  children: ReactNode
-  className?: string
-}) {
-  return (
-    <section
-      className={`animate-fade-up flex h-full min-h-0 flex-col gap-3 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 ${className}`}
-    >
-      <div className="flex items-baseline justify-between">
-        <h2 className="text-lg font-bold">{title}</h2>
-        {action && (
-          <Link to={action.to} className="text-sm font-medium text-slate-500 transition-colors hover:text-blue-600">
-            {action.label}
-          </Link>
-        )}
-      </div>
-      {children}
-    </section>
-  )
 }
 
 export function HomePage() {
@@ -446,32 +286,5 @@ export function HomePage() {
         />
       )}
     </div>
-  )
-}
-
-function StatChip({ label, value, live = false }: { label: string; value: number; live?: boolean }) {
-  return (
-    <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-900">
-      {live && <span className="size-1.5 rounded-full bg-red-500" />}
-      {label}
-      <span className="tabular font-bold text-slate-900 dark:text-slate-50">{value}</span>
-    </span>
-  )
-}
-
-function ActionPill({ to, emoji, label, primary = false }: { to: string; emoji: string; label: string; primary?: boolean }) {
-  return (
-    <Link
-      to={to}
-      className={[
-        'press flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-all hover:-translate-y-0.5',
-        primary
-          ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/30 hover:bg-blue-700'
-          : 'border border-slate-200 bg-white hover:border-blue-300 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-700',
-      ].join(' ')}
-    >
-      <span aria-hidden>{emoji}</span>
-      {label}
-    </Link>
   )
 }
