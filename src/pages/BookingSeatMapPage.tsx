@@ -19,7 +19,7 @@ import { GameScoreBanner } from '../components/GameScoreBanner'
 import { SelectedSeatsBar, type SelectedSeat } from '../components/SelectedSeatsBar'
 import { ZoneLegend } from '../components/ZoneLegend'
 import { useBookingHistory } from '../hooks/useBookingHistory'
-import { useLiveState, useLiveStream } from '../hooks/useLiveGame'
+import { useLiveBroadcast, useLiveState } from '../hooks/useLiveGame'
 import { CURRENT_USER_ID } from '../constants'
 import { teamColor } from '../lib/teamColors'
 import type { ReservationResponse, SeatMapItemResponse } from '../api/types'
@@ -46,7 +46,7 @@ export function BookingSeatMapPage() {
   const seatMapQuery = useQuery({ queryKey: ['seatMap', gameId], queryFn: () => getSeatMap(gameId) })
   // 진행 상태는 10초 폴링으로 받고, 경기가 진행 중이면 SSE로 즉시 갱신한다. SSE가 끊기면 폴링이 값을 맞춘다.
   const liveQuery = useLiveState(gameId, 10_000)
-  const streaming = useLiveStream(gameId, liveQuery.data?.progress === 'LIVE')
+  const streaming = useLiveBroadcast(gameId, liveQuery.data?.progress === 'LIVE').connected
   const availabilityQuery = useQuery({
     queryKey: ['sectionAvailability', gameId],
     queryFn: () => getSectionAvailability(gameId),

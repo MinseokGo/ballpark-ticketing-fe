@@ -3,15 +3,9 @@ import { useEffect, useState } from 'react'
 import { getLiveState } from '../api/booking'
 import { API_BASE_URL } from '../api/client'
 import type { GameProgress, LiveEventResponse, LiveStateResponse } from '../api/types'
+import { streamSse } from '../lib/sse'
 
-const EVENT_TYPES = [
-  'GAME_STARTED',
-  'INNING_CHANGED',
-  'SCORE_CHANGED',
-  'SCORE_CORRECTED',
-  'GAME_FINISHED',
-  'GAME_CANCELLED',
-] as const
+const RECONNECT_MS = 3_000
 
 export const liveKey = (gameId: number) => ['live', gameId] as const
 
@@ -30,20 +24,40 @@ function progressAfter(type: string): GameProgress {
   return 'LIVE'
 }
 
+function wait(ms: number, signal: AbortSignal) {
+  return new Promise<void>((resolve) => {
+    const timer = window.setTimeout(resolve, ms)
+    signal.addEventListener('abort', () => {
+      window.clearTimeout(timer)
+      resolve()
+    })
+  })
+}
+
 /**
- * 진행 중 경기의 SSE 스트림. 연결되면 true.
- * 이벤트마다 상태 캐시를 바로 고치고, 끝나는 이벤트에서는 연결을 닫고 목록을 다시 받는다.
- * 끝난 경기는 서버가 바로 닫으므로 호출하는 쪽은 enabled를 LIVE일 때만 켠다(재연결 반복 방지).
+ * 경기 중계 스트림. 이벤트가 올 때마다 목록에 붙이고 진행 상태 캐시를 고친다.
+ * 끊기면 마지막 번호(Last-Event-ID) 이후만 다시 받는다. 끝나는 이벤트를 받으면 멈춘다.
+ * enabled가 false면 연결하지 않는다.
  */
-export function useLiveStream(gameId: number, enabled: boolean): boolean {
+export function useLiveBroadcast(gameId: number, enabled: boolean) {
   const queryClient = useQueryClient()
+  const [events, setEvents] = useState<LiveEventResponse[]>([])
   const [connected, setConnected] = useState(false)
 
   useEffect(() => {
     if (!enabled) return
-    const source = new EventSource(`${API_BASE_URL}/api/games/${gameId}/live/stream`)
-    const onEvent = (message: Event) => {
-      const event = JSON.parse((message as MessageEvent<string>).data) as LiveEventResponse
+    const controller = new AbortController()
+    const { signal } = controller
+    const url = `${API_BASE_URL}/api/games/${gameId}/live/stream`
+    let lastSeq = 0
+    let ended = false
+
+    const onFrame = (frame: { data: string }) => {
+      const event = JSON.parse(frame.data) as LiveEventResponse
+      // 재접속 때 겹쳐 오는 이벤트는 버린다. 점수와 이닝은 절대값이라 다시 적용해도 상태가 같다.
+      if (event.seq <= lastSeq) return
+      lastSeq = event.seq
+      setEvents((prev) => [...prev, event])
       queryClient.setQueryData<LiveStateResponse>(liveKey(gameId), {
         gameId,
         progress: progressAfter(event.type),
@@ -54,18 +68,37 @@ export function useLiveStream(gameId: number, enabled: boolean): boolean {
         seq: event.seq,
       })
       if (event.terminal) {
-        source.close()
-        setConnected(false)
+        ended = true
         queryClient.invalidateQueries({ queryKey: ['games'] })
       }
     }
-    EVENT_TYPES.forEach((type) => source.addEventListener(type, onEvent))
-    source.onopen = () => setConnected(true)
-    source.onerror = () => setConnected(false)
+
+    const run = async () => {
+      while (!signal.aborted && !ended) {
+        try {
+          await streamSse(url, {
+            signal,
+            lastEventId: lastSeq > 0 ? lastSeq : undefined,
+            onFrame: (frame) => {
+              setConnected(true)
+              onFrame(frame)
+            },
+          })
+        } catch {
+          // 연결 실패는 아래에서 재시도한다.
+        }
+        setConnected(false)
+        if (signal.aborted || ended) break
+        await wait(RECONNECT_MS, signal)
+      }
+    }
+    run()
+
     return () => {
-      source.close()
+      controller.abort()
+      setConnected(false)
     }
   }, [gameId, enabled, queryClient])
 
-  return connected
+  return { events, connected }
 }
