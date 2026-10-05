@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { useState, type ReactNode } from 'react'
+import { useState, type CSSProperties, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { listGames } from '../api/booking'
 import type { GameSummaryResponse } from '../api/types'
@@ -9,6 +9,9 @@ import { LiveGames } from '../components/LiveGames'
 import { Skeleton, SkeletonList } from '../components/Skeleton'
 import { ScrollBox } from '../components/ScrollBox'
 import { useBookingHistory, type BookingHistoryEntry } from '../hooks/useBookingHistory'
+import { useHomeLayout } from '../hooks/useHomeLayout'
+import { packLayout, type HomeWidgetId } from '../lib/homeGrid'
+import { HomeLayoutEditor } from '../components/HomeLayoutEditor'
 import { teamColor, teamInitial } from '../lib/teamColors'
 import { formatKst, kstDateKey, parseServerTime } from '../lib/serverTime'
 
@@ -47,7 +50,7 @@ function NextGameHero({ game, now }: { game: GameSummaryResponse; now: Date }) {
   return (
     <Link
       to={open ? `/booking/${game.id}` : '/schedule'}
-      className="press group relative block overflow-hidden rounded-3xl p-6 text-white shadow-lg shadow-slate-900/10 sm:p-8"
+      className="press group relative block h-full overflow-hidden rounded-3xl p-6 text-white shadow-lg shadow-slate-900/10 sm:p-8"
       style={{
         backgroundImage: `linear-gradient(135deg, ${teamColor(game.homeTeam)}, ${teamColor(game.awayTeam)})`,
       }}
@@ -146,6 +149,16 @@ function MyReservationCard({ entry, game }: { entry: BookingHistoryEntry; game?:
   )
 }
 
+const WIDGET_LABELS: Record<HomeWidgetId, string> = {
+  hero: '다음 경기',
+  live: '지금 진행 중',
+  reservations: '내 예매',
+  today: '오늘의 경기',
+  recent: '최근 결과',
+  upcoming: '다가오는 경기',
+  events: '이벤트',
+}
+
 function Panel({
   title,
   action,
@@ -158,7 +171,7 @@ function Panel({
   className?: string
 }) {
   return (
-    <section className={`animate-fade-up space-y-3 ${className}`}>
+    <section className={`animate-fade-up flex h-full min-h-0 flex-col gap-3 ${className}`}>
       <div className="flex items-baseline justify-between">
         <h2 className="text-lg font-bold">{title}</h2>
         {action && (
@@ -206,6 +219,130 @@ export function HomePage() {
   // 결제가 끝나지 않은 예매는 가장 먼저 알려야 해서 맨 위 알림으로 올린다.
   const pending = myActive.filter((entry) => entry.status === 'PENDING')
 
+  const { items, setSize, move, reset } = useHomeLayout()
+  const [editing, setEditing] = useState(false)
+
+  // 위젯마다 차지하는 칸(lg 기준 3칸 중)과 내용. 내용이 없으면 null이라 숨겨진다.
+  const widgets: Record<HomeWidgetId, { node: ReactNode } | null> = {
+    hero: {
+      node: (
+        <div className="min-w-0">
+          {isPending && <Skeleton className="h-72" />}
+          {next && <NextGameHero game={next} now={now} />}
+          {data && !next && (
+            <p className="rounded-3xl border border-dashed border-slate-200 p-10 text-center text-sm text-slate-500 dark:border-slate-700">
+              곧 열리는 경기가 없어요. 새 일정이 올라오면 여기서 먼저 알려드릴게요.
+            </p>
+          )}
+        </div>
+      ),
+    },
+    live: {
+      node: (
+        <Panel title="지금 진행 중">
+          {live.length > 0 ? (
+            <ScrollBox>
+              <LiveGames games={live} />
+            </ScrollBox>
+          ) : (
+            <p className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500 dark:border-slate-700">
+              지금 중계 중인 경기가 없어요.
+            </p>
+          )}
+        </Panel>
+      ),
+    },
+    reservations: {
+      node: (
+        <Panel
+          title="내 예매"
+          action={myActive.length > 0 ? { to: '/profile', label: '전체 보기' } : undefined}
+        >
+          {myActive.length === 0 ? (
+            <Link
+              to="/booking"
+              className="flex items-center justify-between rounded-2xl border border-dashed border-slate-200 p-6 text-sm text-slate-500 transition-colors hover:border-blue-300 hover:text-blue-600 dark:border-slate-700"
+            >
+              <span>아직 예매한 경기가 없어요. 좌석을 골라 첫 예매를 해 보세요.</span>
+              <span aria-hidden>→</span>
+            </Link>
+          ) : (
+            <ScrollBox>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {myActive.map((entry) => (
+                  <MyReservationCard key={entry.reservationId} entry={entry} game={byId.get(entry.gameId)} />
+                ))}
+              </div>
+            </ScrollBox>
+          )}
+        </Panel>
+      ),
+    },
+    today: {
+      node: (
+        <Panel title="오늘의 경기" action={{ to: '/schedule', label: '일정' }}>
+          {todays.length === 0 ? (
+            <p className="rounded-2xl bg-white p-5 text-sm text-slate-500 dark:bg-slate-900">오늘은 예정된 경기가 없어요.</p>
+          ) : (
+            <ScrollBox>
+              <div className="grid gap-2">
+                {todays.map((game) => (
+                  <GameTile key={game.id} game={game} now={now} />
+                ))}
+              </div>
+            </ScrollBox>
+          )}
+        </Panel>
+      ),
+    },
+    recent: recentResults.length === 0 ? null : {
+      node: (
+        <Panel title="최근 결과">
+          <ScrollBox>
+            <div className="depth-stage grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {recentResults.map((game, index) => (
+                <div key={game.id} className="animate-rise" style={{ animationDelay: `${Math.min(index, 8) * 90}ms` }}>
+                  <GameTile game={game} now={now} />
+                </div>
+              ))}
+            </div>
+          </ScrollBox>
+        </Panel>
+      ),
+    },
+    upcoming: {
+      node: (
+        <Panel title="다가오는 경기" action={{ to: '/booking', label: '전체 보기' }}>
+          {isPending && <SkeletonList count={3} />}
+          {data && upcoming.length === 0 && (
+            <p className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500 dark:border-slate-700">
+              아직 열린 경기가 없어요.
+            </p>
+          )}
+          <ScrollBox>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {upcoming.map((game, index) => (
+                <div key={game.id} className="animate-rise" style={{ animationDelay: `${Math.min(index, 8) * 90}ms` }}>
+                  <GameTile game={game} now={now} />
+                </div>
+              ))}
+            </div>
+          </ScrollBox>
+        </Panel>
+      ),
+    },
+    events: {
+      node: (
+        <Panel title="이벤트">
+          <EventBanner />
+        </Panel>
+      ),
+    },
+  }
+
+  // 숨겨진 위젯은 자리를 차지하지 않는다. 배치는 편집기와 같은 함수로 계산한다.
+  const placed = packLayout(items.filter((item) => widgets[item.id] !== null))
+
   return (
     <div className="space-y-8">
       <header className="animate-fade-up flex flex-wrap items-end justify-between gap-4">
@@ -240,107 +377,47 @@ export function HomePage() {
         </div>
       </div>
 
-      {/* 1행: 다음 경기(넓게) + 지금 진행 중 */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="min-w-0 lg:col-span-2">
-          {isPending && <Skeleton className="h-72" />}
-          {next && <NextGameHero game={next} now={now} />}
-          {data && !next && (
-            <p className="rounded-3xl border border-dashed border-slate-200 p-10 text-center text-sm text-slate-500 dark:border-slate-700">
-              곧 열리는 경기가 없어요. 새 일정이 올라오면 여기서 먼저 알려드릴게요.
-            </p>
-          )}
-        </div>
-        <Panel title="지금 진행 중">
-          {live.length > 0 ? (
-            <ScrollBox>
-              <LiveGames games={live} />
-            </ScrollBox>
-          ) : (
-            <p className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500 dark:border-slate-700">
-              지금 중계 중인 경기가 없어요.
-            </p>
-          )}
-        </Panel>
-      </div>
-
-      {/* 2행: 내 예매(넓게) + 오늘의 경기 */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Panel
-          title="내 예매"
-          className="lg:col-span-2"
-          action={myActive.length > 0 ? { to: '/profile', label: '전체 보기' } : undefined}
-        >
-          {myActive.length === 0 ? (
-            <Link
-              to="/booking"
-              className="flex items-center justify-between rounded-2xl border border-dashed border-slate-200 p-6 text-sm text-slate-500 transition-colors hover:border-blue-300 hover:text-blue-600 dark:border-slate-700"
+      <div className="home-grid">
+        {placed.map((item) => {
+          const widget = widgets[item.id]
+          if (!widget) return null
+          return (
+            <div
+              key={item.id}
+              className="home-widget"
+              style={
+                {
+                  '--col': item.col + 1,
+                  '--row': item.row + 1,
+                  '--w': item.w,
+                  '--h': item.h,
+                } as CSSProperties
+              }
             >
-              <span>아직 예매한 경기가 없어요. 좌석을 골라 첫 예매를 해 보세요.</span>
-              <span aria-hidden>→</span>
-            </Link>
-          ) : (
-            <ScrollBox>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {myActive.map((entry) => (
-                  <MyReservationCard key={entry.reservationId} entry={entry} game={byId.get(entry.gameId)} />
-                ))}
-              </div>
-            </ScrollBox>
-          )}
-        </Panel>
-        <Panel title="오늘의 경기" action={{ to: '/schedule', label: '일정' }}>
-          {todays.length === 0 ? (
-            <p className="rounded-2xl bg-white p-5 text-sm text-slate-500 dark:bg-slate-900">오늘은 예정된 경기가 없어요.</p>
-          ) : (
-            <ScrollBox>
-              <div className="grid gap-2">
-                {todays.map((game) => (
-                  <GameTile key={game.id} game={game} now={now} />
-                ))}
-              </div>
-            </ScrollBox>
-          )}
-        </Panel>
+              {widget.node}
+            </div>
+          )
+        })}
       </div>
 
-      {recentResults.length > 0 && (
-        <Panel title="최근 결과">
-          <ScrollBox>
-            <div className="depth-stage grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {recentResults.map((game, index) => (
-                <div key={game.id} className="animate-rise" style={{ animationDelay: `${Math.min(index, 8) * 90}ms` }}>
-                  <GameTile game={game} now={now} />
-                </div>
-              ))}
-            </div>
-          </ScrollBox>
-        </Panel>
+      <button
+        type="button"
+        onClick={() => setEditing(true)}
+        className="press fixed right-0 top-1/2 z-30 -translate-y-1/2 rounded-l-2xl bg-slate-900 px-2.5 py-4 text-xs font-bold tracking-wider text-white shadow-lg [writing-mode:vertical-rl] hover:bg-slate-700 dark:bg-slate-50 dark:text-slate-900"
+      >
+        레이아웃
+      </button>
+
+      {editing && (
+        <HomeLayoutEditor
+          placed={placed}
+          labels={WIDGET_LABELS}
+          onSetSize={setSize}
+          onMove={move}
+          onReset={reset}
+          onClose={() => setEditing(false)}
+        />
       )}
-
-      {/* 3행: 다가오는 경기 전체 */}
-      <Panel title="다가오는 경기" action={{ to: '/booking', label: '전체 보기' }}>
-        {isPending && <SkeletonList count={3} />}
-        {data && upcoming.length === 0 && (
-          <p className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500 dark:border-slate-700">
-            아직 열린 경기가 없어요.
-          </p>
-        )}
-        <ScrollBox>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {upcoming.map((game, index) => (
-              <div key={game.id} className="animate-rise" style={{ animationDelay: `${Math.min(index, 8) * 90}ms` }}>
-                <GameTile game={game} now={now} />
-              </div>
-            ))}
-          </div>
-        </ScrollBox>
-      </Panel>
-
-      {/* 4행: 이벤트는 가로로 넓게 */}
-      <Panel title="이벤트">
-        <EventBanner />
-      </Panel>
     </div>
   )
 }
