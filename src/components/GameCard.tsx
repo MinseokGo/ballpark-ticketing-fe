@@ -29,7 +29,7 @@ export function GameCard({ game }: { game: GameSummaryResponse }) {
   const open = game.status === 'OPEN'
 
   const content = (
-    <div className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-4 transition-shadow dark:border-slate-800 dark:bg-slate-900">
+    <div className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all duration-300 group-hover:shadow-md dark:border-slate-800 dark:bg-slate-900">
       <div className="flex shrink-0 -space-x-2">
         <TeamBadge team={game.homeTeam} />
         <TeamBadge team={game.awayTeam} />
@@ -60,7 +60,7 @@ export function GameCard({ game }: { game: GameSummaryResponse }) {
   return (
     <Link
       to={`/booking/${game.id}`}
-      className="block rounded-2xl transition-transform hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+      className="group block rounded-2xl transition-transform duration-300 hover:-translate-y-0.5 active:scale-[0.99]"
     >
       {content}
     </Link>

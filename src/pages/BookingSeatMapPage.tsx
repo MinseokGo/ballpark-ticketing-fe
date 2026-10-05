@@ -10,7 +10,9 @@ import {
   pay,
 } from '../api/booking'
 import { ApiError } from '../api/client'
-import { ErrorBanner, SuccessBanner } from '../components/Banner'
+import { ErrorBanner } from '../components/Banner'
+import { Celebration } from '../components/Celebration'
+import { Skeleton } from '../components/Skeleton'
 import { StadiumMap, type StadiumSectionSeats } from '../components/StadiumMap'
 import { useBookingHistory } from '../hooks/useBookingHistory'
 import { useUserId } from '../hooks/useUserId'
@@ -218,7 +220,7 @@ export function BookingSeatMapPage() {
         </div>
       )}
 
-      {seatMapQuery.isPending && <p className="text-sm text-slate-500">좌석맵을 불러오는 중...</p>}
+      {seatMapQuery.isPending && <Skeleton className="h-[420px]" />}
 
       <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
         <span className="flex items-center gap-1">
@@ -233,7 +235,7 @@ export function BookingSeatMapPage() {
       {activeMutationError && <ErrorBanner error={activeMutationError as ApiError} />}
 
       {!reservation && (
-        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
+        <div className="animate-slide-up fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white/95 shadow-[0_-8px_24px_-12px_rgba(15,23,42,0.18)] backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
           <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-4 py-4">
             <p className="text-sm">
               선택한 좌석 <strong className="tabular">{selectedSeatIds.size}</strong> / {MAX_SEATS}
@@ -245,7 +247,7 @@ export function BookingSeatMapPage() {
               type="button"
               disabled={selectedSeatIds.size === 0 || reserveMutation.isPending}
               onClick={() => reserveMutation.mutate()}
-              className="rounded-full bg-blue-600 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-blue-700 disabled:opacity-40"
+              className="press rounded-full bg-blue-600 px-6 py-3 text-sm font-bold text-white shadow-sm shadow-blue-600/30 transition-colors hover:bg-blue-700 disabled:opacity-40 disabled:shadow-none"
             >
               {reserveMutation.isPending ? '예매하는 중...' : '이 좌석으로 예매하기'}
             </button>
@@ -254,7 +256,7 @@ export function BookingSeatMapPage() {
       )}
 
       {reservation && (
-        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
+        <div className="animate-slide-up fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white/95 shadow-[0_-8px_24px_-12px_rgba(15,23,42,0.18)] backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
           <div className="mx-auto max-w-3xl space-y-3 px-4 py-4">
             <div className="flex items-center justify-between">
               <div>
@@ -272,7 +274,7 @@ export function BookingSeatMapPage() {
                   type="button"
                   disabled={payMutation.isPending}
                   onClick={() => payMutation.mutate()}
-                  className="flex-1 rounded-full bg-emerald-600 px-4 py-3 text-sm font-bold text-white disabled:opacity-40"
+                  className="press flex-1 rounded-full bg-emerald-600 px-4 py-3 text-sm font-bold text-white shadow-sm shadow-emerald-600/30 disabled:opacity-40"
                 >
                   {payMutation.isPending ? '결제하는 중...' : '결제하기'}
                 </button>
@@ -280,7 +282,7 @@ export function BookingSeatMapPage() {
                   type="button"
                   disabled={cancelMutation.isPending}
                   onClick={() => cancelMutation.mutate()}
-                  className="rounded-full border border-slate-200 px-4 py-3 text-sm font-semibold disabled:opacity-40 dark:border-slate-700"
+                  className="press rounded-full border border-slate-200 px-4 py-3 text-sm font-semibold disabled:opacity-40 dark:border-slate-700"
                 >
                   예약 취소
                 </button>
@@ -289,12 +291,21 @@ export function BookingSeatMapPage() {
 
             {reservation.status === 'CONFIRMED' && (
               <div className="space-y-2">
-                <SuccessBanner>결제 완료! 예매가 확정됐어요.</SuccessBanner>
+                <Celebration />
+                <div className="animate-pop flex items-center gap-3 rounded-2xl bg-emerald-50 p-4 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-lg font-bold text-white">
+                    ✓
+                  </span>
+                  <div>
+                    <p className="font-bold">결제가 완료됐어요</p>
+                    <p className="text-sm opacity-80">선택한 좌석이 내 예매로 확정됐어요.</p>
+                  </div>
+                </div>
                 <button
                   type="button"
                   disabled={cancelMutation.isPending}
                   onClick={() => cancelMutation.mutate()}
-                  className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold disabled:opacity-40 dark:border-slate-700"
+                  className="press rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold disabled:opacity-40 dark:border-slate-700"
                 >
                   예약 취소하기
                 </button>

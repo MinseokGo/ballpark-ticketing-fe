@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { GameCard } from '../components/GameCard'
+import { SkeletonList } from '../components/Skeleton'
 import { listGames } from '../api/booking'
 
 export function BookingGamesPage() {
@@ -17,11 +18,15 @@ export function BookingGamesPage() {
         </p>
       </div>
 
-      {isPending && <p className="text-sm text-slate-500">불러오는 중...</p>}
+      {isPending && <SkeletonList count={4} />}
       {isError && <p className="text-sm text-red-600">경기 목록을 불러오지 못했다.</p>}
 
       <div className="space-y-2">
-        {data?.content.map((game) => <GameCard key={game.id} game={game} />)}
+        {data?.content.map((game, index) => (
+          <div key={game.id} className="animate-fade-up" style={{ animationDelay: `${index * 50}ms` }}>
+            <GameCard game={game} />
+          </div>
+        ))}
       </div>
     </div>
   )
