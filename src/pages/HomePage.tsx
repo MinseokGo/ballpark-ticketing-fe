@@ -5,6 +5,7 @@ import { listGames } from '../api/booking'
 import type { GameSummaryResponse } from '../api/types'
 import { EventBanner } from '../components/EventBanner'
 import { GameCard } from '../components/GameCard'
+import { LiveGames } from '../components/LiveGames'
 import { Skeleton, SkeletonList } from '../components/Skeleton'
 import { useBookingHistory, type BookingHistoryEntry } from '../hooks/useBookingHistory'
 import { teamColor, teamInitial } from '../lib/teamColors'
@@ -143,6 +144,8 @@ export function HomePage() {
     .sort((a, b) => a.startAt.localeCompare(b.startAt))
   const next = upcoming[0]
   const todays = games.filter((game) => sameDay(new Date(game.startAt), now)).sort((a, b) => a.startAt.localeCompare(b.startAt))
+  // 진행 중인 경기: 예정 경기 중 가장 가까운 2경기를 지금 중계 중인 것으로 취급한다(시뮬레이션).
+  const live = upcoming.slice(0, 2)
   const myActive = entries.filter((entry) => entry.status !== 'CANCELLED')
 
   return (
@@ -151,6 +154,13 @@ export function HomePage() {
         <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">{greeting(now.getHours())}</p>
         <h1 className="text-3xl font-extrabold tracking-tight">야구장</h1>
       </section>
+
+      {live.length > 0 && (
+        <section className="animate-fade-up space-y-3 [animation-delay:40ms]">
+          <h2 className="text-lg font-bold">지금 진행 중</h2>
+          <LiveGames games={live} />
+        </section>
+      )}
 
       <section className="animate-fade-up [animation-delay:60ms]">
         {isPending && <Skeleton className="h-48" />}
