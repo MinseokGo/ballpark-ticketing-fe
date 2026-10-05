@@ -1,6 +1,7 @@
 import { apiGet, apiPost } from './client'
 import type {
   ChatMessageResponse,
+  MyReservationResponse,
   LiveEventResponse,
   GameProgress,
   GameResponse,
@@ -32,12 +33,13 @@ export function listChatMessages(gameId: number): Promise<ChatMessageResponse[]>
   return apiGet<ChatMessageResponse[]>(`/api/games/${gameId}/chat/messages`)
 }
 
-export function postChatMessage(gameId: number, userId: number, content: string): Promise<ChatMessageResponse> {
-  return apiPost<ChatMessageResponse, { content: string }>(
-    `/api/games/${gameId}/chat/messages`,
-    { content },
-    { 'X-User-Id': String(userId) },
-  )
+export function postChatMessage(gameId: number, content: string): Promise<ChatMessageResponse> {
+  return apiPost<ChatMessageResponse, { content: string }>(`/api/games/${gameId}/chat/messages`, { content })
+}
+
+/** 로그인한 사용자의 예약 목록(최신순). */
+export function listMyReservations(): Promise<MyReservationResponse[]> {
+  return apiGet<MyReservationResponse[]>('/api/me/reservations')
 }
 
 /** 경기 기록 전체(번호 순). 끝난 경기의 플레이 기록을 보여준다. */
@@ -57,16 +59,8 @@ export function getSectionAvailability(gameId: number): Promise<SectionAvailabil
   return apiGet<SectionAvailabilityResponse[]>(`/api/games/${gameId}/sections`)
 }
 
-export function createReservation(
-  gameId: number,
-  userId: number,
-  request: ReservationCreateRequest,
-): Promise<ReservationResponse> {
-  return apiPost<ReservationResponse, ReservationCreateRequest>(
-    `/api/games/${gameId}/reservations`,
-    request,
-    { 'X-User-Id': String(userId) },
-  )
+export function createReservation(gameId: number, request: ReservationCreateRequest): Promise<ReservationResponse> {
+  return apiPost<ReservationResponse, ReservationCreateRequest>(`/api/games/${gameId}/reservations`, request)
 }
 
 export function pay(reservationId: number, request: PaymentCreateRequest): Promise<PaymentResponse> {
