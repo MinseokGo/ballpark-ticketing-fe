@@ -21,6 +21,7 @@ import { useBookingHistory } from '../hooks/useBookingHistory'
 import { CURRENT_USER_ID } from '../constants'
 import { teamColor } from '../lib/teamColors'
 import type { ReservationResponse, SeatMapItemResponse } from '../api/types'
+import { formatKst } from '../lib/serverTime'
 
 const MAX_SEATS = 4
 
@@ -173,7 +174,7 @@ export function BookingSeatMapPage() {
         {game ? (
           <>
             <p className="text-sm font-medium text-white/80">
-              {new Date(game.startAt).toLocaleString('ko-KR', {
+              {formatKst(game.startAt, {
                 month: 'long',
                 day: 'numeric',
                 weekday: 'short',
