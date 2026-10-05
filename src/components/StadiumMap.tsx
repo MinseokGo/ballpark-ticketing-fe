@@ -267,7 +267,8 @@ function zoneView(band: Band, w: number, h: number): View {
   const angle = ((band.fStart + band.fEnd) / 2) * (Math.PI / 180)
   const xc = CX + rMid * Math.sin(angle)
   const yc = CY - rMid * Math.cos(angle)
-  const zoom = clamp(60 / (band.bOuter - band.bInner), 2.2, 5)
+  // 구역을 고르면 그 구역이 화면을 크게 채우도록 줌인한다(구역이 얇을수록 더 많이 확대).
+  const zoom = clamp(90 / (band.bOuter - band.bInner), 3.5, 8)
   const k = Math.min(w / WORLD_W, h / WORLD_H) * zoom
   return clampView({ zoom, panX: -k * (xc - CX), panY: -k * VS * (yc - CY) }, w, h)
 }
