@@ -71,6 +71,10 @@ export type LiveEventResponse = {
   half: HalfInning | null
   homeScore: number
   awayScore: number
+  playerId: number | null
+  playerName: string | null
+  teamName: string | null
+  detail: string | null
   createdAt: string
   terminal: boolean
 }

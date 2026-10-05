@@ -234,6 +234,7 @@ export function HomePage() {
         <div className="grid grid-cols-3 gap-2 sm:flex">
           <ActionPill to="/booking" emoji="🎟️" label="예매하기" primary />
           <ActionPill to="/schedule" emoji="📅" label="팀별 일정" />
+        <ActionPill to="/records" emoji="📈" label="경기 기록" />
           <ActionPill to="/profile" emoji="🙋" label="마이페이지" />
         </div>
       </div>
